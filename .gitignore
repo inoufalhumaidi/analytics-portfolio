@@ -1,0 +1,19 @@
+# Office / Power BI temporary and lock files
+~$*
+*.tmp
+.~lock.*
+
+# Power BI Project (.pbip) local caches, if a project is ever saved as .pbip
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+
+# Analysis Services client libraries auto-downloaded by Build_PowerBI_Model.ps1
+**/.amo_libs/
+
+# OS / sync clutter
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/

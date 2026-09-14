@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ridgeline Field Services — Operational Efficiency Case Study</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#f3f1ea; --ink:#1b1f24; --ink-2:#52514e; --ink-muted:#85837c;
+    --hairline:#d9d5c9; --chrome:#232a35; --accent:#b5622a;
+    --good:#0ca30c; --warning:#b8790a; --critical:#c23b3b;
+    --good-bg:#e6f5e0; --warning-bg:#faf0da; --critical-bg:#fbe2e2;
+    --r1:#2a78d6; --r2:#eb6834; --r3:#1baf7a; --r4:#eda100; --r5:#e87ba4;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:#ffffff; color:var(--ink); font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:13.5px; line-height:1.6; }
+  .mono{ font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; }
+  h1,h2,h3,h4{ font-family:"Oswald",sans-serif; font-weight:600; letter-spacing:.005em; margin:0; }
+  .page{ max-width:880px; margin:0 auto; padding: 0 8px; }
+
+  .cover{ background:var(--chrome); color:#f3f1ea; padding:70px 56px 56px; border-bottom:6px solid var(--accent); }
+  .cover .eyebrow{ font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:#a9b1bd; margin-bottom:14px; }
+  .cover h1{ font-size:38px; line-height:1.15; max-width:640px; }
+  .cover .accent{ color:var(--accent); }
+  .cover .sub{ margin-top:18px; font-size:15px; color:#c3c2b7; max-width:600px; }
+  .cover .meta{ margin-top:34px; display:flex; gap:34px; font-size:12px; color:#8b93a1; }
+  .cover .meta b{ display:block; color:#f3f1ea; font-size:13px; font-family:"IBM Plex Mono",monospace; margin-top:2px; }
+  .disclosure{ background:#fff8ec; border:1px solid #e8d9b8; border-left:4px solid var(--accent); padding:14px 18px; margin: 26px 56px 0; font-size:12.5px; color:#5c4a2a; border-radius:0 6px 6px 0; }
+
+  section{ padding: 34px 56px; border-bottom:1px solid var(--hairline); }
+  section:last-of-type{ border-bottom:none; }
+  .eyebrow-h{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-muted); font-weight:600; margin-bottom:8px; }
+  h2.section-title{ font-size:22px; margin-bottom:18px; padding-bottom:10px; border-bottom:2px solid var(--ink); display:inline-block; }
+  h3{ font-size:15.5px; margin:22px 0 10px; }
+  p{ margin: 0 0 12px; color:var(--ink-2); }
+  ul,ol{ margin:0 0 14px; padding-left:20px; color:var(--ink-2); }
+  li{ margin-bottom:5px; }
+  strong{ color:var(--ink); }
+  code{ font-family:"IBM Plex Mono",monospace; background:#f0eee6; padding:1px 6px; border-radius:4px; font-size:12px; }
+
+  .callout{ background:#f6f4ec; border-radius:8px; padding:16px 20px; margin: 16px 0; border-left:4px solid var(--ink); }
+  .callout.finding{ border-left-color:var(--r1); }
+  .callout.risk{ border-left-color:var(--critical); background:var(--critical-bg); }
+  .callout.rigor{ border-left-color:var(--good); background:var(--good-bg); }
+  .callout p:last-child{ margin-bottom:0; }
+
+  .kpi-row{ display:flex; gap:14px; margin:18px 0; flex-wrap:wrap; }
+  .kpi{ flex:1 1 150px; border:1px solid var(--hairline); border-radius:8px; padding:12px 14px; }
+  .kpi .l{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-muted); font-weight:600; }
+  .kpi .v{ font-family:"Oswald",sans-serif; font-size:24px; font-weight:600; margin-top:3px; }
+  .kpi .t{ font-size:11px; color:var(--ink-muted); margin-top:2px; }
+
+  table{ width:100%; border-collapse:collapse; margin:14px 0; font-size:12.5px; }
+  th{ text-align:left; background:#f0eee6; padding:8px 10px; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-2); }
+  td{ padding:8px 10px; border-bottom:1px solid var(--hairline); }
+  tr:last-child td{ border-bottom:none; }
+  .num{ font-family:"IBM Plex Mono",monospace; text-align:right; }
+  .bad{ color:var(--critical); font-weight:600; }
+  .good-txt{ color:var(--good); font-weight:600; }
+
+  .barchart{ margin:16px 0; }
+  .bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .bar-row .name{ width:120px; font-size:12px; text-align:right; flex-shrink:0; }
+  .bar-row .track{ flex:1; background:#f0eee6; border-radius:4px; height:20px; position:relative; }
+  .bar-row .fill{ height:100%; border-radius:4px; display:flex; align-items:center; }
+  .bar-row .val{ font-size:11px; font-family:"IBM Plex Mono",monospace; margin-left:8px; width:46px; }
+  .target-marker{ position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--critical); }
+
+  .pill{ display:inline-flex; align-items:center; font-size:10.5px; font-weight:600; padding:2px 9px; border-radius:20px; }
+  .pill.good{ background:var(--good-bg); color:var(--good); }
+  .pill.warning{ background:var(--warning-bg); color:var(--warning); }
+  .pill.critical{ background:var(--critical-bg); color:var(--critical); }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .toc{ list-style:none; padding:0; margin:0; }
+  .toc li{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px dotted var(--hairline); font-size:13px; }
+  .toc .n{ color:var(--ink-muted); font-family:"IBM Plex Mono",monospace; margin-right:10px; }
+
+  .rec-card{ border:1px solid var(--hairline); border-radius:8px; padding:14px 18px; margin-bottom:12px; }
+  .rec-card h4{ font-size:14px; margin-bottom:6px; }
+  .rec-card .owner{ font-size:11px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.04em; }
+
+  footer{ padding:24px 56px 40px; font-size:11px; color:var(--ink-muted); text-align:center; }
+
+  @media print{
+    body{ font-size:12px; }
+    section{ break-inside: avoid-page; }
+    .cover{ break-after: page; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="eyebrow">Analyst Case Study · Project 1 of 5</div>
+  <h1>Where is technician capacity<br>being <span class="accent">wasted</span>—and what should<br>dispatch do about it this week?</h1>
+  <div class="sub">A star-schema SQL model, a formula-driven Excel operational control, Power BI measures, and a live dashboard, built on two years of synthetic HVAC/electrical dispatch data for Ridgeline Field Services.</div>
+  <div class="meta">
+    <div>PREPARED FOR<b>Dispatch &amp; Operations Leadership</b></div>
+    <div>REPORTING WINDOW<b>Jan 2024 – Dec 2025</b></div>
+    <div>DATASET<b>~40,000 job records</b></div>
+    <div>STACK<b>SQL Server · Power BI · Excel</b></div>
+  </div>
+</div>
+<div class="disclosure"><strong>Data disclosure.</strong> Ridgeline Field Services is a fictional company built for this portfolio project. Every figure in this document is derived from synthetic data generated by <code>sql/02_generate_synthetic_data.sql</code>. No confidential, proprietary, or real-organization data is used or represented anywhere in this analysis.</div>
+
+<div class="page">
+
+<section>
+  <div class="eyebrow-h">Contents</div>
+  <ul class="toc">
+    <li><span><span class="n">01</span>Executive summary</span></li>
+    <li><span><span class="n">02</span>Business question &amp; scope</span></li>
+    <li><span><span class="n">03</span>Methodology &amp; data validation</span></li>
+    <li><span><span class="n">04</span>Finding 1 — Regional capacity imbalance</span></li>
+    <li><span><span class="n">05</span>Finding 2 — Travel-driven SLA risk (a segment, not an aggregate)</span></li>
+    <li><span><span class="n">06</span>Finding 3 — Skill-driven rework</span></li>
+    <li><span><span class="n">07</span>The priority action queue as an operational control</span></li>
+    <li><span><span class="n">08</span>Data quality: what was checked, and what it caught</span></li>
+    <li><span><span class="n">09</span>Management recommendations</span></li>
+    <li><span><span class="n">10</span>Appendix — traceability, UAT, reproducibility</span></li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="section-title">01 · Executive summary</h2>
+  <p>Ridgeline Field Services dispatches HVAC and electrical technicians across five regions. Leadership's standing question was simple to ask and, until this project, expensive to answer with a spreadsheet: <strong>where is technician capacity sitting idle, and where is it overcommitted — and what, specifically, should change?</strong></p>
+  <div class="kpi-row">
+    <div class="kpi"><div class="l">Dec 2025 avg. utilization</div><div class="v">69.5%</div><div class="t">target 75% · floor 60%</div></div>
+    <div class="kpi"><div class="l">SLA compliance</div><div class="v">98.3%</div><div class="t">target 95%</div></div>
+    <div class="kpi"><div class="l">First-time-fix</div><div class="v">87.0%</div><div class="t">target 90%</div></div>
+    <div class="kpi"><div class="l">Gross margin, Dec 2025</div><div class="v">$575K</div><div class="t">on $1.10M revenue</div></div>
+  </div>
+  <p>Three findings drive the recommendations in this report:</p>
+  <ol>
+    <li><strong>South Metro's utilization never once overlaps with any other region's</strong> across the full two-year window (43.0%–57.5%, vs. 63.6%+ everywhere else) — a structural staffing/dispatch imbalance, not a one-off dip.</li>
+    <li><strong>East Valley's SLA problem is invisible in the aggregate number</strong> (97.6% overall) and only appears when urgent, 1-hour-window jobs are isolated (92.3%) — a travel-distance-driven gap that a single blended KPI would hide.</li>
+    <li><strong>Apprentice technicians run a callback rate roughly 4.7x higher than Master technicians</strong> (21.6% vs 4.6%), concentrated enough to show up repeatedly in the priority action queue below.</li>
+  </ol>
+  <p>All three are backed by a reusable SQL layer, cross-validated against an independently-built Excel formula layer — a cross-check that caught two real bugs during this project's build (Section 08), which is the actual argument for building the same logic twice rather than once.</p>
+</section>
+
+<section>
+  <h2 class="section-title">02 · Business question &amp; scope</h2>
+  <p><strong>Business question:</strong> Where is technician capacity being wasted, and which dispatch decisions should change this week?</p>
+  <p>Scope: five regions (North Metro, South Metro, East Valley, West Hills, Central District), ten HVAC/Electrical service types, 40 technicians (36–37 active in any given month), 300 clients, and roughly 40,000 dispatched jobs across a 24-month window (Jan 2024–Dec 2025). Out of scope: real-time dispatch routing/GPS optimization, and multi-year demand forecasting — this is a monthly-refresh analytical model built to support a weekly dispatch-review cadence, not a live routing engine.</p>
+</section>
+
+<section>
+  <h2 class="section-title">03 · Methodology &amp; data validation</h2>
+  <p>The analytical layer is a five-dimension/one-fact star schema in SQL Server (<code>Dim_Date</code>, <code>Dim_Region</code>, <code>Dim_Technician</code>, <code>Dim_Client</code>, <code>Dim_ServiceType</code>, <code>Fact_ServiceJobs</code>), plus a <code>Ref_KPITargets</code> table that centralizes every threshold used downstream — change a number there and the SQL views, the Excel dashboard, and the Power BI conditional formatting all move together.</p>
+  <p>The dataset is <strong>synthetic by design, not by necessity</strong> — a set-based T-SQL generator built in deliberate, documented imbalances (region workload intensity, travel-time baselines, skill-driven fix probabilities, HVAC/Electrical seasonality) so the KPI layer would have something real to find. It was then profiled — row counts, referential integrity, distribution sanity checks — before any dashboard was built on top of it. The full write-up, including a generation bug the profiling step caught (technicians dispatched before their hire date), is in <code>docs/data_validation_report.md</code>.</p>
+  <p>Every KPI is implemented as a parameterized SQL view/procedure (<code>sql/04_kpi_views.sql</code>, <code>sql/05_stored_procedures.sql</code>) and then <strong>re-implemented independently</strong> as live formulas in the Excel workbook — SUMIFS/AVERAGEIFS against a 40,000-row table, not a paste of query results. The two are cross-checked against each other rather than assumed to agree (Section 08).</p>
+</section>
+
+<section>
+  <h2 class="section-title">04 · Finding 1 — Regional capacity imbalance</h2>
+  <p>Utilization is measured as (job duration + travel time) actually worked, divided by available weekday capacity, per technician per month. December 2025:</p>
+  <div class="barchart">
+    <div class="bar-row"><div class="name">North Metro</div><div class="track"><div class="fill" style="width:72.8%; background:var(--r1);"></div><div class="target-marker" style="left:75%;"></div></div><div class="val num">72.8%</div></div>
+    <div class="bar-row"><div class="name">South Metro</div><div class="track"><div class="fill" style="width:51.6%; background:var(--r2);"></div><div class="target-marker" style="left:75%;"></div></div><div class="val num bad">51.6%</div></div>
+    <div class="bar-row"><div class="name">East Valley</div><div class="track"><div class="fill" style="width:78.3%; background:var(--r3);"></div><div class="target-marker" style="left:75%;"></div></div><div class="val num">78.3%</div></div>
+    <div class="bar-row"><div class="name">West Hills</div><div class="track"><div class="fill" style="width:76.3%; background:var(--r4);"></div><div class="target-marker" style="left:75%;"></div></div><div class="val num">76.3%</div></div>
+    <div class="bar-row"><div class="name">Central District</div><div class="track"><div class="fill" style="width:68.5%; background:var(--r5);"></div><div class="target-marker" style="left:75%;"></div></div><div class="val num">68.5%</div></div>
+  </div>
+  <p style="font-size:11px; color:var(--ink-muted);">Red marker = 75% target. Source: <code>dbo.vw_RegionKPIMonthly</code>, cross-checked against <code>KPI_Dashboard</code> in the Excel workbook (exact match).</p>
+  <div class="callout finding">
+    <p><strong>This is not a one-month anomaly.</strong> Across all 24 months, South Metro's utilization ranges 43.0%–57.5% and <strong>never once overlaps</strong> with any other region's range (the next-lowest region, West Hills, never drops below 63.6%). South Metro is authorized for 8 technicians against a workload that consistently supports fewer. At the other end, East Valley averages the highest utilization of the five regions (79.2%), and several of its individual technicians post &gt;95% utilization in a given month — an over-capacity/burnout risk (see the priority queue in Section 07).</p>
+  </div>
+</section>
+
+<section>
+  <h2 class="section-title">05 · Finding 2 — Travel-driven SLA risk (a segment, not an aggregate)</h2>
+  <p>SLA here is an <strong>arrival-window commitment</strong> (e.g. "technician arrives within 1 hour of the scheduled window"), not a multi-day completion deadline — this is how most residential/commercial field-service SLAs are actually written, and it is what makes dispatch delay and travel time SLA-relevant in the first place.</p>
+  <table>
+    <tr><th>Region</th><th class="num">Overall SLA</th><th class="num">1-hr urgent-response SLA</th><th class="num">Gap</th></tr>
+    <tr><td>Central District</td><td class="num">98.6%</td><td class="num">95.3%</td><td class="num">3.3 pts</td></tr>
+    <tr><td>South Metro</td><td class="num">98.5%</td><td class="num">95.0%</td><td class="num">3.5 pts</td></tr>
+    <tr><td>North Metro</td><td class="num">98.3%</td><td class="num">94.6%</td><td class="num">3.7 pts</td></tr>
+    <tr><td>West Hills</td><td class="num">98.3%</td><td class="num">94.5%</td><td class="num">3.8 pts</td></tr>
+    <tr><td>East Valley</td><td class="num">97.9%</td><td class="num bad">93.2%</td><td class="num bad">4.7 pts</td></tr>
+  </table>
+  <div class="callout finding">
+    <p><strong>East Valley's overall SLA rate (97.9%) looks unremarkable</strong> — it would not trip an aggregate-level alert, and would even sit within a point of the field. The gap only becomes visible when the analysis is segmented to the tight-window (1-hour) urgent-response jobs, where East Valley trails every other region and posts the widest overall-to-tight SLA drop-off in the dataset. The underlying driver is geography: East Valley's average technician travel time is roughly triple Central District's, and this project's generator deliberately encoded that difference to make exactly this kind of aggregate-vs-segment discrepancy visible — a reminder that a single blended SLA number is not sufficient evidence of dispatch health.</p>
+  </div>
+</section>
+
+<section>
+  <h2 class="section-title">06 · Finding 3 — Skill-driven rework</h2>
+  <table>
+    <tr><th>Skill level</th><th class="num">First-time-fix</th><th class="num">Callback rate</th><th class="num">Completed jobs</th></tr>
+    <tr><td>Apprentice</td><td class="num bad">78.4%</td><td class="num bad">21.6%</td><td class="num">7,192</td></tr>
+    <tr><td>Journeyman</td><td class="num">88.0%</td><td class="num">12.0%</td><td class="num">26,473</td></tr>
+    <tr><td>Master</td><td class="num good-txt">95.4%</td><td class="num good-txt">4.6%</td><td class="num">3,739</td></tr>
+  </table>
+  <p>The gradient is clean and monotonic across all three skill tiers — Apprentices run a callback rate roughly 4.7x Master technicians' — and it is the single most consistent driver behind the "Low first-time-fix" and "High callback" flags in the priority queue below: 12 of the 15 technicians on this month's queue carry at least one of those two flags.</p>
+</section>
+
+<section>
+  <h2 class="section-title">07 · The priority action queue as an operational control</h2>
+  <p>Every KPI above rolls up into a single, ranked worklist — this is the artifact meant to actually change a dispatch manager's Monday, not just inform it. A technician appears here when they breach one or more thresholds in <code>Ref_KPITargets</code>; the risk score is a simple count of breaches, and the recommended action is generated directly from which thresholds were crossed.</p>
+  <table>
+    <tr><th>Technician</th><th>Region</th><th class="num">Util.</th><th class="num">FTF</th><th class="num">SLA</th><th class="num">Callback</th><th class="num">Risk</th><th>Action</th></tr>
+    <tr><td>Dakota Mendez</td><td>South Metro</td><td class="num bad">58.0%</td><td class="num bad">75.0%</td><td class="num">100.0%</td><td class="num bad">25.0%</td><td class="num"><span class="pill critical">3</span></td><td style="font-size:11.5px;">Underutilized; low FTF; high callback</td></tr>
+    <tr><td>Hayden Weber</td><td>South Metro</td><td class="num bad">54.8%</td><td class="num">85.7%</td><td class="num">97.6%</td><td class="num bad">14.3%</td><td class="num"><span class="pill warning">2</span></td><td style="font-size:11.5px;">Underutilized; high callback</td></tr>
+    <tr><td>Emerson Larsen</td><td>South Metro</td><td class="num">63.2%</td><td class="num bad">76.7%</td><td class="num">97.7%</td><td class="num bad">23.3%</td><td class="num"><span class="pill warning">2</span></td><td style="font-size:11.5px;">Low FTF; high callback</td></tr>
+    <tr><td>Sage Adeyemi</td><td>Central District</td><td class="num">63.2%</td><td class="num bad">83.0%</td><td class="num">100.0%</td><td class="num bad">17.0%</td><td class="num"><span class="pill warning">2</span></td><td style="font-size:11.5px;">Low FTF; high callback</td></tr>
+    <tr><td colspan="8" style="text-align:center; color:var(--ink-muted); font-size:11.5px;">+ 11 more, ranked by risk score — full list in the live dashboard and <code>excel/Ridgeline_KPI_Dashboard.xlsx</code></td></tr>
+  </table>
+  <p style="font-size:11px; color:var(--ink-muted);">Source: <code>dbo.vw_PriorityActionQueue</code>, reproduced independently by formula in the Excel <code>Priority_Action_Queue</code> sheet.</p>
+</section>
+
+<section>
+  <h2 class="section-title">08 · Data quality: what was checked, and what it caught</h2>
+  <p>Three anomaly types were deliberately injected into the synthetic dataset (~0.45–0.5% of completed jobs each) so the data-quality layer would have real, known-quantity issues to detect rather than a clean dataset with nothing to validate against:</p>
+  <div class="grid2">
+    <table>
+      <tr><th>Check</th><th class="num">Rate</th><th>Status</th></tr>
+      <tr><td>Timestamp inversion</td><td class="num">0.452%</td><td><span class="pill warning">PASS</span></td></tr>
+      <tr><td>Missing actuals</td><td class="num">0.452%</td><td><span class="pill warning">PASS</span></td></tr>
+      <tr><td>Extreme duration</td><td class="num">0.452%</td><td><span class="pill warning">PASS</span></td></tr>
+      <tr><td>Orphan dimension keys</td><td class="num">0.000%</td><td><span class="pill good">Clean</span></td></tr>
+      <tr><td>Inconsistent completion flags</td><td class="num">0.000%</td><td><span class="pill good">Clean</span></td></tr>
+    </table>
+    <div class="callout rigor" style="margin-top:0;">
+      <p><strong>Excel/SQL cross-check: exact match</strong> on all three non-zero anomaly types (169/169 each) — two independently-written implementations of the same check, in two different tools, agreeing exactly.</p>
+    </div>
+  </div>
+  <div class="callout risk">
+    <p><strong>A real bug this cross-checking caught.</strong> While validating the Priority Action Queue, the Excel formula layer and the SQL view disagreed on First-Time-Fix/SLA/Callback percentages for specific technicians — not by rounding, but by tens of percentage points. Root cause: <code>vw_TechnicianKPIMonthly</code> joined a technician's jobs without a date filter, so a technician's monthly quality metrics were silently averaged across their entire 2-year history rather than the selected month. Region-level KPIs were unaffected. The original UAT suite didn't catch it because its test fixture only ever had one month of data — nothing to leak across. The fix and a new regression test (UAT-06a/06b) are in <code>sql/04_kpi_views.sql</code> and <code>sql/06_uat_test_cases.sql</code>; the full account is in <code>docs/data_validation_report.md</code> §5. This is the practical argument for building the same KPI logic twice, independently, rather than having Excel simply display SQL's output.</p>
+  </div>
+</section>
+
+<section>
+  <h2 class="section-title">09 · Management recommendations</h2>
+  <div class="rec-card">
+    <div class="owner">Dispatch Manager · This week</div>
+    <h4>Rebalance South Metro against North Metro before adding headcount anywhere</h4>
+    <p>South Metro's structural underutilization (averaging 50.5%, and never overlapping any other region's range across 24 months) should be addressed by demand-shifting or reallocating routing before authorizing any new hires in higher-intensity regions — the capacity gap is a distribution problem first, a headcount problem only if rebalancing doesn't close it.</p>
+  </div>
+  <div class="rec-card">
+    <div class="owner">Regional Ops Lead, East Valley · This month</div>
+    <h4>Review dispatch routing/travel radius specifically for 1-hour-SLA job types</h4>
+    <p>Because the gap doesn't show up in East Valley's overall SLA number, this requires deliberately segmenting the review to urgent-response jobs — a blended monthly SLA report would keep missing it.</p>
+  </div>
+  <div class="rec-card">
+    <div class="owner">Training Lead · Next quarter</div>
+    <h4>Pair Apprentice technicians with Master technicians on a rotating basis</h4>
+    <p>The ~4.7x callback-rate gap between Apprentice and Master technicians is large and consistent enough to justify a structured pairing/mentorship program rather than one-off coaching — target the specific technicians flagged in the priority queue first.</p>
+  </div>
+  <div class="rec-card">
+    <div class="owner">Analytics/BI Owner · Ongoing</div>
+    <h4>Keep the SQL and Excel KPI logic independent, and re-run the UAT suite after any view change</h4>
+    <p>Section 08's bug was caught specifically because two independent implementations existed to disagree with each other. Collapsing them into one (e.g., Excel importing SQL's pre-aggregated output) would remove that safety net.</p>
+  </div>
+</section>
+
+<section>
+  <h2 class="section-title">10 · Appendix — traceability, UAT, reproducibility</h2>
+  <p><strong>Requirements traceability:</strong> 10 business requirements (BR-01–BR-10), each mapped to a KPI/field, its SQL/Excel implementation, and a specific validation test — full matrix in <code>docs/requirements_traceability_matrix.md</code>, mirrored in the Excel workbook's <code>Traceability_UAT</code> sheet.</p>
+  <p><strong>UAT suite:</strong> 8 test cases (<code>sql/06_uat_test_cases.sql</code>) run inside a transaction against a fully isolated fixture and roll back automatically — the production dataset is never modified by running it. All 8 currently PASS, including a regression test (UAT-06a/06b) added specifically to close the gap that let the Section 08 bug through.</p>
+  <p><strong>Reproducibility:</strong> the entire pipeline — schema, synthetic data generator, data-quality views, KPI views, stored procedures, UAT suite, Excel workbook builder, and this dashboard's data exports — runs from the SQL scripts and the <code>excel/Build_Workbook.ps1</code> script in this repository. See <code>README.md</code> for exact commands.</p>
+  <p><strong>Live dashboard:</strong> an interactive version of Sections 04–07 is published and linked from the project README.</p>
+</section>
+
+<footer>Ridgeline Field Services is a fictional company. This document and all data within it are synthetic, produced for a portfolio analytics project. Prepared with SQL Server, Power BI, Microsoft Excel, and a custom HTML dashboard.</footer>
+
+</div>
+</body>
+</html>
