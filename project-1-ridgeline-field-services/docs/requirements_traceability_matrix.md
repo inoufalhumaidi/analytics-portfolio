@@ -31,4 +31,4 @@ This was not caught by the original UAT suite (UAT-02a/02b's test technician onl
 
 ## UAT Execution
 
-Run `sql/06_uat_test_cases.sql` against the database at any time — it inserts a fully isolated fixture inside a transaction, asserts the UAT cases referenced above, prints a PASS/FAIL report, and rolls back automatically. See the script header for details. Last executed run (2026-09-14): all 8 test cases (UAT-01, 02a, 02b, 03, 04, 05, 06a, 06b) returned PASS.
+Run `sql/06_uat_test_cases.sql` against the database at any time — it inserts a fully isolated fixture inside a transaction, asserts the UAT cases referenced above, prints a PASS/FAIL report, and rolls back automatically. See the script header for details. Last executed run (2026-09-19): all 12 test cases (UAT-01, 02a, 02b, 03, 04, 05, 06a, 06b) returned PASS.

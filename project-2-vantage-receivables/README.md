@@ -91,7 +91,7 @@ ageing bucket. 36 applications worth $165,306 fall in exactly that window here.
 |---|---:|:---:|---|
 | Promise kept rate | 86.29% | Green | High-risk tier: **53.87%**, 244 broken promises worth $625,642 |
 | Billing lag | 1.78 d | Green | Southeast DC: **3.22 d**, drifting 1.56 → 4.78 through 2025 |
-| Credit utilisation | 17.70% | Green | Three accounts over limit, one at **106%** |
+| Credit utilisation | 17.70% | Green | One account over limit at **106%**; three above the 80% target |
 
 Every one is arithmetically correct and operationally useless alone. A portfolio average cannot
 breach until the whole book does. Each now ships with its cohort cut attached to the same report.

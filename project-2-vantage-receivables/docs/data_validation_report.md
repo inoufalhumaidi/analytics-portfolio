@@ -134,6 +134,69 @@ figure is computed from its components as published, not from their unrounded in
 
 ---
 
+### 3e. Four defects found in a later review (2026-09-19)
+
+This project was reviewed last of the three, after the same review had found a wrong headline
+figure in each of the other two. All four findings below are things that were true of the shipped
+project, not of an early draft.
+
+**The QA gate printed FAIL and returned exit code 0.** `usp_RunDataQualityChecks` ended its failure
+branch with a `PRINT`, so `sqlcmd -b` reported success. The README described it as *"12 behavioural
+checks + a gate that can fail the build"*; it could not fail anything. This matters more here than
+in the sibling projects, because this gate is **meant** to fail — 96 planted duplicate receipts
+mis-state AR by 3.421% against a 1% tolerance, and that failure is the demonstration that the
+detector fires. Failing silently made the demonstration decorative.
+
+Now `THROW`s. Verified in both directions: exit 1 at the shipped tolerance, exit 0 when the
+tolerance is loosened past 3.421%.
+
+Two smaller things in the same procedure: the two failure conditions were chained with `ELSE IF`,
+so a per-check rate breach suppressed the AR mis-statement figure entirely — the gate announced one
+reason and went quiet about the other, and which one you saw depended on the order they were
+written in. Both are now evaluated and both reported.
+
+**"Three accounts over limit" — there is one.** The scorecard row read
+*"Credit utilisation 17.70%, Green — Three accounts over limit, one at 106%"*. Exactly one account
+(C0297) exceeds its credit line, at 106.10%. The other two are at 98.28% and 80.92%: above the 80%
+target, comfortably **under** their limits. The claim conflated "three accounts breaching the amber
+threshold" with "three exceeding their credit line", and the second is the one a credit manager
+acts on. Restated as *"One account over limit at 106%; three above the 80% target."*
+
+**UAT-08 could not fail.** It asserted that `CollectableExposure` lies between 0 and
+`WeightedExposure`. Both bounds hold **by construction**: the figure is floored by an explicit
+`ELSE 0`, and it is produced by subtracting two non-negative quantities. No arithmetic error in
+between can violate either.
+
+That is the precise failure this case was written to catch — §3 above records an earlier defect
+where raw disputed dollars were subtracted from a risk-weighted total, mixing units and driving the
+figure negative. With the floor in place that defect would now be **absorbed**, silently demoting
+the worst-affected accounts to the bottom of the call list rather than showing a negative number.
+And the clamp is load-bearing, not a corner case: **32 of the 272 queued accounts** currently sit
+in the clamped region.
+
+Two changes. `fn_PriorityActionQueue` now also publishes `NetCollectablePosition`, the same figure
+*before* the floor, which is allowed to be negative — a negative value is information, meaning
+Vantage holds more of that customer's cash than their risk-weighted exposure, so the work is
+matching money rather than chasing it. And `UAT-08` now recomputes the value from `fn_CustomerAR`
+and asserts equality, in addition to the bounds.
+
+**A partial UAT run looked like a clean one.** While editing UAT-08 a compile error killed the
+script at case 8. The suite still reached its report and printed **"UAT RESULT: 8 passed, 0
+failed"** — a run in which 17 of 25 cases never executed, indistinguishable from a clean run of a
+shorter suite, and it raised nothing. The harness counted what ran, not what should have run.
+
+All three projects now assert an expected case count before reporting, and raise if the two
+disagree.
+
+**Also hardened:** `excel/Validate_Workbook.ps1` held 17 hardcoded expected values. All 17 were
+correct, but a frozen snapshot is the shape that went stale in Project 3 — if the SQL logic moves,
+the workbook follows it while the validator keeps comparing against the old number. It now reads
+each figure from SQL at runtime **and** separately checks SQL against the published value, so
+"Excel disagrees with SQL" and "SQL has moved since the documents were written" are reported as the
+different problems they are.
+
+---
+
 ## 4. Defect deliberately retained
 
 **96 duplicate cash receipts**, worth $371,039.99, producing 101 over-applied invoices.

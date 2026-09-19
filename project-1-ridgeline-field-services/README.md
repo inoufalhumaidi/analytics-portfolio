@@ -22,7 +22,7 @@ SQL Server (star schema, reusable views/procs) → Power BI (DAX) → Excel (for
    ```
    sqlcmd -S <your_instance> -E -C -i sql/06_uat_test_cases.sql
    ```
-   This inserts an isolated test fixture inside a transaction, asserts 8 KPI test cases against hand-calculated expected values, prints a PASS/FAIL report, and rolls back automatically — the production dataset is never touched by running it.
+   Expect 12/12. This inserts an isolated test fixture inside a transaction, asserts 12 cases against hand-calculated expected values, prints a PASS/FAIL report, rolls back automatically -- the production dataset is never touched -- and exits non-zero if anything fails or if the suite does not run to completion.
 
 2. **Excel workbook.** Edit the connection string at the top of `excel/Build_Workbook.ps1` if your instance name differs from `localhost\TEW_SQLEXPRESS`, then run it:
    ```

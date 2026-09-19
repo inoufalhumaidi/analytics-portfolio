@@ -377,6 +377,20 @@ GO
 /* ------------------------------ report ---------------------------------- */
 SELECT TestID, Area, Requirement, Expected, Actual, Verdict FROM #UATResults ORDER BY TestID;
 
+-- How many cases this suite is supposed to contain. A run that dies partway
+-- through still reaches this report and prints a pass count covering only the
+-- cases that executed, which is indistinguishable from a clean run of a
+-- shorter suite. Counting what ran is not the same as counting what should
+-- have run.
+DECLARE @ExpectedCases INT = 21;
+DECLARE @ran INT = (SELECT COUNT(*) FROM #UATResults);
+IF @ran <> @ExpectedCases
+BEGIN
+    PRINT CONCAT('UAT HARNESS: only ', @ran, ' of ', @ExpectedCases,
+                 ' cases recorded a result -- the suite did not run to completion.');
+    ;THROW 51006, 'UAT suite did not run to completion. Scroll up for the error that stopped it.', 1;
+END
+
 DECLARE @pass INT = (SELECT COUNT(*) FROM #UATResults WHERE Verdict = 'PASS');
 DECLARE @fail INT = (SELECT COUNT(*) FROM #UATResults WHERE Verdict = 'FAIL');
 PRINT '';

@@ -550,6 +550,23 @@ Scored AS (
             CASE WHEN ca.WeightedExposure - ca.DisputedWeightedExposure * 0.75 - ca.UnappliedCash > 0
                  THEN ca.WeightedExposure - ca.DisputedWeightedExposure * 0.75 - ca.UnappliedCash
                  ELSE 0 END AS DECIMAL(14,2)),
+        -- The same figure BEFORE the floor, which is allowed to be negative.
+        --
+        -- Two reasons it is published rather than left implicit. First, a
+        -- negative value is information: it means Vantage is holding more of
+        -- that customer's cash than their risk-weighted exposure, so the work
+        -- is matching money, not chasing it -- 32 of the 272 queued accounts
+        -- are in that position. Second, and the reason it was added, the floor
+        -- makes the published figure incapable of going negative, so an earlier
+        -- defect of exactly that kind -- subtracting raw disputed dollars from
+        -- a risk-weighted total, mixing units -- would now be absorbed by the
+        -- clamp instead of surfacing. The clamp would turn a units error into a
+        -- silent demotion to the bottom of the ranking.
+        NetCollectablePosition = CAST(
+            ca.WeightedExposure - ca.DisputedWeightedExposure * 0.75 - ca.UnappliedCash AS DECIMAL(14,2)),
+        IsFullyOffsetByCash = CAST(
+            CASE WHEN ca.WeightedExposure - ca.DisputedWeightedExposure * 0.75 - ca.UnappliedCash <= 0
+                 THEN 1 ELSE 0 END AS BIT),
         CreditHoldFlag = CAST(CASE WHEN ca.CreditUtilizationPct > t.CreditLimitWarn THEN 1 ELSE 0 END AS BIT)
     FROM dbo.fn_CustomerAR(@AsOf) ca CROSS JOIN T t
     WHERE ca.PastDueBalance > 0 OR ca.DisputedBalance > 0
@@ -588,6 +605,7 @@ SELECT
     r.CollectorID, r.CollectorName, r.Team, r.TermsCode,
     r.OpenBalance, r.PastDueBalance, r.Balance90Plus, r.DisputedBalance,
     r.WeightedExposure, r.DisputedWeightedExposure, r.CollectableExposure,
+    r.NetCollectablePosition, r.IsFullyOffsetByCash,
     r.OldestDaysPastDue, r.CreditUtilizationPct, r.AvgDaysLateHistoric,
     r.UnappliedCash, r.NetExposure, r.BrokenPromises90d,
     r.ActionCode, r.CreditHoldFlag,

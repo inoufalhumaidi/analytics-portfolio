@@ -318,12 +318,42 @@ BEGIN
                  ' | AR mis-stated by: ', FORMAT(@exposure, 'C', 'en-US'),
                  ' (', @exposurePct, '% of ', FORMAT(@openAR, 'C', 'en-US'), ' open AR)');
 
+    -- Both conditions are evaluated and both are reported. These used to be
+    -- chained with ELSE IF, so a per-check rate breach hid the AR
+    -- mis-statement figure entirely -- the gate announced one reason and went
+    -- quiet about the other, and which one you saw depended on the order they
+    -- happened to be written in.
+    DECLARE @reasons VARCHAR(800) = '';
     IF @failed > 0
-        PRINT CONCAT('QA GATE: FAIL -- ', @failed, ' check(s) exceed ', @MaxAcceptableRatePct, '% of their population. See dbo.vw_DQ_Anomalies.');
-    ELSE IF @exposurePct > @MaxMisstatementPctOfAR
-        PRINT CONCAT('QA GATE: FAIL -- AR mis-stated by ', @exposurePct, '%, above the ', @MaxMisstatementPctOfAR, '% tolerance. See dbo.vw_DQ_Anomalies.');
-    ELSE
+    BEGIN
+        DECLARE @r1 VARCHAR(400) = CONCAT(@failed, ' check(s) exceed ', @MaxAcceptableRatePct, '% of their population');
+        PRINT CONCAT('QA GATE: FAIL -- ', @r1, '. See dbo.vw_DQ_Anomalies.');
+        SET @reasons = @r1;
+    END
+    IF @exposurePct > @MaxMisstatementPctOfAR
+    BEGIN
+        DECLARE @r2 VARCHAR(400) = CONCAT('AR mis-stated by ', @exposurePct, '%, above the ', @MaxMisstatementPctOfAR, '% tolerance');
+        PRINT CONCAT('QA GATE: FAIL -- ', @r2, '. See dbo.vw_DQ_Anomalies.');
+        SET @reasons = CASE WHEN @reasons = '' THEN @r2 ELSE CONCAT(@reasons, '; ', @r2) END;
+    END
+
+    IF @reasons = ''
         PRINT 'QA GATE: PASS -- all checks within tolerance.';
+    ELSE
+    BEGIN
+        -- A gate that only PRINTs is not a gate: this returned exit code 0
+        -- while printing the word FAIL, so nothing downstream could act on it,
+        -- and the README described it as "a gate that can fail the build".
+        --
+        -- This project's gate is MEANT to fail -- 96 planted duplicate
+        -- receipts mis-state AR by 3.421% against a 1% tolerance, and that is
+        -- the demonstration. Failing loudly is the whole point; failing
+        -- silently made the demonstration decorative.
+        DECLARE @msg VARCHAR(900) = CONCAT('QA gate failed: ', @reasons,
+            '. This build is expected to fail the gate -- see docs/data_validation_report.md. ',
+            'Inspect dbo.vw_DQ_Anomalies.');
+        ;THROW 50003, @msg, 1;
+    END
 END
 GO
 

@@ -21,21 +21,76 @@ param([string]$WorkbookPath = (Join-Path $PSScriptRoot 'Lumen_Spend_Scorecard.xl
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path $WorkbookPath)) { throw "Workbook not found: $WorkbookPath" }
 
-# The figures SQL published, independently of anything Excel does.
+$SqlServerInst = 'localhost\TEW_SQLEXPRESS'
+$SqlDb         = 'LumenSpend'
+$AsOf          = '2025-12-31'
+
+# Each figure carries BOTH the query SQL answers it with and the value published
+# in the README and case study.
+#
+# The published value used to be the only target, and this project is the reason
+# that is not good enough: a rounding fix changed the erosion figures and this
+# file kept asserting the old constant, so it reported a failure that was really
+# a stale expectation. The opposite case is worse -- if the workbook and the
+# constant drift together, it reports success.
+#
+# Checking against both separates two different failures:
+#   Excel <> SQL        the workbook's formulas disagree with the database
+#   SQL   <> published  the database has moved since the documents were written
 $sqlFigures = @(
-    @{ Sheet='Dashboard'; Cell='C8';  Label='Extended price (12m)';    Expect=48586386.86; Tol=0.05 },
-    @{ Sheet='Dashboard'; Cell='C9';  Label='Landed cost (12m)';       Expect=49474785.92; Tol=0.05 },
-    @{ Sheet='Dashboard'; Cell='G9';  Label='Erosion capture %';       Expect=29.50;       Tol=0.02 },
-    @{ Sheet='Dashboard'; Cell='G10'; Label='Annual opportunity';      Expect=4047608.72;  Tol=0.05 },
-    @{ Sheet='Dashboard'; Cell='B20'; Label='Erosion capture (score)'; Expect=29.50;       Tol=0.02 },
-    @{ Sheet='Dashboard'; Cell='B21'; Label='Maverick spend %';        Expect=27.09;       Tol=0.02 },
-    @{ Sheet='Dashboard'; Cell='B22'; Label='Price variance %';        Expect=-0.19;       Tol=0.02 },
-    @{ Sheet='Dashboard'; Cell='B23'; Label='Acceptance rate %';       Expect=99.11;       Tol=0.02 },
-    @{ Sheet='Dashboard'; Cell='B24'; Label='On-time delivery %';      Expect=80.62;       Tol=0.02 },
-    @{ Sheet='Dashboard'; Cell='B25'; Label='Expedite spend %';        Expect=0.23;        Tol=0.02 },
-    @{ Sheet='Dashboard'; Cell='B26'; Label='Single-source spend %';   Expect=27.17;       Tol=0.02 },
-    @{ Sheet='Dashboard'; Cell='B27'; Label='Top-5 vendor share %';    Expect=27.20;       Tol=0.05 }
+    @{ Sheet='Dashboard'; Cell='C8';  Label='Extended price (12m)';    Published=48586386.86; Tol=0.05;
+       Sql="SELECT TotalSpend FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='C9';  Label='Landed cost (12m)';       Published=49474785.92; Tol=0.05;
+       Sql="SELECT LandedSpend FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='G9';  Label='Erosion capture %';       Published=29.50;       Tol=0.02;
+       Sql="SELECT ErosionCapturePct FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='G10'; Label='Annual opportunity';      Published=4047608.72;  Tol=0.05;
+       Sql="SELECT ErosionOpportunity FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='B20'; Label='Erosion capture (score)'; Published=29.50;       Tol=0.02;
+       Sql="SELECT ErosionCapturePct FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='B21'; Label='Maverick spend %';        Published=27.09;       Tol=0.02;
+       Sql="SELECT MaverickSpendPct FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='B22'; Label='Price variance %';        Published=-0.19;       Tol=0.02;
+       Sql="SELECT PPVPct FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='B23'; Label='Acceptance rate %';       Published=99.11;       Tol=0.02;
+       Sql="SELECT AcceptanceRatePct FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='B24'; Label='On-time delivery %';      Published=80.62;       Tol=0.02;
+       Sql="SELECT OnTimeDeliveryPct FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='B25'; Label='Expedite spend %';        Published=0.23;        Tol=0.02;
+       Sql="SELECT ExpediteSpendPct FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='B26'; Label='Single-source spend %';   Published=27.17;       Tol=0.02;
+       Sql="SELECT SingleSourceSpendPct FROM dbo.fn_SpendKPI('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='B27'; Label='Top-5 vendor share %';    Published=27.20;       Tol=0.05;
+       Sql="SELECT Top5VendorSharePct FROM dbo.fn_SpendKPI('$AsOf')" }
 )
+
+function Get-SqlScalar([string]$query) {
+    $cn = New-Object System.Data.SqlClient.SqlConnection("Server=$SqlServerInst;Database=$SqlDb;Integrated Security=True;")
+    $cn.Open()
+    try {
+        $cmd = $cn.CreateCommand(); $cmd.CommandText = $query; $cmd.CommandTimeout = 300
+        $v = $cmd.ExecuteScalar()
+        if ($null -eq $v -or $v -is [System.DBNull]) { return $null }
+        return [double]$v
+    } finally { $cn.Close() }
+}
+
+Write-Host "Reading the current figures from SQL..." -ForegroundColor Cyan
+$sqlUnavailable = $false
+foreach ($f in $sqlFigures) {
+    try { $f.Expect = Get-SqlScalar $f.Sql }
+    catch {
+        # Without a database the workbook can still be checked against what was
+        # published -- the state a reader who only cloned the repo is in. Say
+        # so rather than silently calling it a pass.
+        $f.Expect = $f.Published
+        $sqlUnavailable = $true
+    }
+}
+if ($sqlUnavailable) {
+    Write-Host "  SQL Server unreachable -- falling back to the PUBLISHED figures." -ForegroundColor Yellow
+    Write-Host "  This checks the workbook against the documents, not against the database." -ForegroundColor Yellow
+}
 
 $errorText = @('#REF!','#VALUE!','#NAME?','#DIV/0!','#N/A','#NULL!','#NUM!')
 $failures  = 0
@@ -64,6 +119,18 @@ try {
         Write-Host ("  {0,-26} excel {1,15:N2}   sql {2,15:N2}   diff {3,9:N4}  {4}" -f `
             $f.Label, $v, $f.Expect, $diff, $(if ($ok) { 'MATCH' } else { 'DIFFERS' })) `
             -ForegroundColor $(if ($ok) { 'Green' } else { 'Red' })
+
+        # Separately: has SQL moved away from what the documents say? A
+        # different failure from "Excel disagrees with SQL", and reporting them
+        # together is how a stale published figure hides behind a green run.
+        if (-not $sqlUnavailable) {
+            $drift = [math]::Abs($f.Expect - $f.Published)
+            if ($drift -gt $f.Tol) {
+                $failures++
+                Write-Host ("      ^ SQL now says {0:N2} but the README and case study publish {1:N2}. Update the documents." -f `
+                    $f.Expect, $f.Published) -ForegroundColor Red
+            }
+        }
     }
 
     Write-Host ""

@@ -157,11 +157,33 @@ UAT-08  Collectable exposure is bounded and non-negative.
 --------------------------------------------------------------------------- */
 DECLARE @negExposure INT = (SELECT COUNT(*) FROM dbo.fn_PriorityActionQueue('2025-12-31') WHERE CollectableExposure < 0);
 DECLARE @overExposure INT = (SELECT COUNT(*) FROM dbo.fn_PriorityActionQueue('2025-12-31') WHERE CollectableExposure > WeightedExposure + 0.005);
+
+-- The two checks above are bounds, and BOTH hold by construction: the figure
+-- is floored at zero by an explicit ELSE 0, and it is produced by subtracting
+-- two non-negative quantities from WeightedExposure. Neither can fail whatever
+-- the arithmetic does in between -- which means the original defect this case
+-- was written for, raw dollars subtracted from a risk-weighted total, would
+-- now be swallowed by the clamp and pass. 32 of the 272 queued accounts sit in
+-- the clamped region, so that is not a hypothetical corner.
+--
+-- This recomputes the value from fn_CustomerAR, which is where the inputs
+-- come from, and asserts the pre-clamp figure as well so the clamp cannot hide
+-- a units error behind a floor of zero.
+DECLARE @exposureMismatch INT = (
+    SELECT COUNT(*)
+    FROM dbo.fn_PriorityActionQueue('2025-12-31') q
+    JOIN dbo.fn_CustomerAR('2025-12-31') ca ON ca.CustomerID = q.CustomerID
+    WHERE ABS(q.NetCollectablePosition
+              - (ca.WeightedExposure - ca.DisputedWeightedExposure * 0.75 - ca.UnappliedCash)) > 0.005
+       OR ABS(q.CollectableExposure
+              - CASE WHEN q.NetCollectablePosition > 0 THEN q.NetCollectablePosition ELSE 0 END) > 0.005);
+
 INSERT INTO #UATResults VALUES ('UAT-08','Priority queue',
- 'CollectableExposure is between 0 and WeightedExposure for every account',
- '0 negative, 0 over', CAST(@negExposure AS VARCHAR(10)) + ' / ' + CAST(@overExposure AS VARCHAR(10)),
- CASE WHEN @negExposure = 0 AND @overExposure = 0 THEN 'PASS' ELSE 'FAIL' END,
- 'Negative exposure is a units error -- weighted dollars minus raw dollars -- and it sorts the worst-affected accounts to the BOTTOM of the call list, which is the opposite of what the control is for.');
+ 'CollectableExposure equals the recomputed net position, floored at zero, for every account',
+ '0 negative, 0 over, 0 mismatched',
+ CAST(@negExposure AS VARCHAR(10)) + ' / ' + CAST(@overExposure AS VARCHAR(10)) + ' / ' + CAST(@exposureMismatch AS VARCHAR(10)),
+ CASE WHEN @negExposure = 0 AND @overExposure = 0 AND @exposureMismatch = 0 THEN 'PASS' ELSE 'FAIL' END,
+ 'Negative exposure is a units error -- weighted dollars minus raw dollars -- and it sorts the worst-affected accounts to the BOTTOM of the call list, which is the opposite of what the control is for. The bounds alone cannot detect it because the clamp guarantees them; the recomputation is what actually tests the arithmetic.');
 
 /* ---------------------------------------------------------------------------
 UAT-09  Every queued account gets exactly one action, and it is a known one.
@@ -442,6 +464,22 @@ INSERT INTO #UATResults VALUES ('UAT-25','Days beyond terms',
 GO
 /* ------------------------------ report ---------------------------------- */
 SELECT TestID, Area, Requirement, Expected, Actual, Verdict FROM #UATResults ORDER BY TestID;
+
+-- How many cases this suite is supposed to contain. A run that dies partway
+-- through -- a compile error in one case, say -- still reaches this report and
+-- prints "8 passed, 0 failed", which is indistinguishable from a clean run of
+-- a shorter suite. Counting what ran is not the same as counting what should
+-- have run, and only the second one catches a suite that stopped early.
+DECLARE @ExpectedCases INT = 25;
+DECLARE @ran INT = (SELECT COUNT(*) FROM #UATResults);
+IF @ran <> @ExpectedCases
+BEGIN
+    PRINT '';
+    PRINT CONCAT('UAT HARNESS: only ', @ran, ' of ', @ExpectedCases,
+                 ' cases recorded a result. The suite did not run to completion -- ',
+                 'scroll up for the error that stopped it.');
+    ;THROW 50021, 'UAT suite did not run to completion. The pass count below covers only the cases that executed.', 1;
+END
 
 DECLARE @pass INT = (SELECT COUNT(*) FROM #UATResults WHERE Verdict = 'PASS');
 DECLARE @fail INT = (SELECT COUNT(*) FROM #UATResults WHERE Verdict = 'FAIL');

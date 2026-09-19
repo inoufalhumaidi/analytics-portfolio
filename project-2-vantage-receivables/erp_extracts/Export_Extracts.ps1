@@ -83,6 +83,7 @@ SELECT PriorityRank, CollectorRank, CustomerID, CustomerName, Segment, Region, R
        CollectorID, CollectorName, Team, TermsCode,
        OpenBalance, PastDueBalance, Balance90Plus, DisputedBalance,
        WeightedExposure, DisputedWeightedExposure, CollectableExposure,
+       NetCollectablePosition, CAST(IsFullyOffsetByCash AS INT) AS IsFullyOffsetByCash,
        OldestDaysPastDue, CreditUtilizationPct, AvgDaysLateHistoric,
        UnappliedCash, NetExposure, BrokenPromises90d,
        ActionCode, CAST(CreditHoldFlag AS INT) AS CreditHoldFlag,

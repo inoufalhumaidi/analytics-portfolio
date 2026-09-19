@@ -283,6 +283,21 @@ INSERT INTO #UATResults VALUES ('UAT-09',
 PRINT '=== Ridgeline Field Services: UAT Test Report ===';
 SELECT * FROM #UATResults ORDER BY TestID;
 
+-- How many assertions this suite is supposed to contain. A run that dies
+-- partway through still reaches this report and prints a pass count covering
+-- only the cases that executed, which is indistinguishable from a clean run of
+-- a shorter suite. Counting what ran is not the same as counting what should
+-- have run.
+DECLARE @ExpectedCases INT = 12;
+DECLARE @Ran INT = (SELECT COUNT(*) FROM #UATResults);
+IF @Ran <> @ExpectedCases
+BEGIN
+    PRINT CONCAT('UAT HARNESS: only ', @Ran, ' of ', @ExpectedCases,
+                 ' assertions recorded a result -- the suite did not run to completion.');
+    ROLLBACK TRANSACTION UATRun;
+    ;THROW 51101, 'UAT suite did not run to completion. Scroll up for the error that stopped it.', 1;
+END
+
 DECLARE @Failed INT = (SELECT COUNT(*) FROM #UATResults WHERE Result = 'FAIL');
 DECLARE @Passed INT = (SELECT COUNT(*) FROM #UATResults WHERE Result = 'PASS');
 PRINT 'UAT RESULT: ' + CAST(@Passed AS VARCHAR(10)) + ' passed, ' + CAST(@Failed AS VARCHAR(10)) + ' failed.';

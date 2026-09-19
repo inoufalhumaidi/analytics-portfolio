@@ -29,26 +29,87 @@ param(
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path $WorkbookPath)) { throw "Workbook not found: $WorkbookPath" }
 
-# The figures SQL published, independently of anything Excel does.
+$SqlServerInst = 'localhost\TEW_SQLEXPRESS'
+$SqlDb         = 'VantageAR'
+$AsOf          = '2025-12-31'
+
+# Each figure carries BOTH the query SQL answers it with and the value published
+# in the README and case study.
+#
+# The published value used to be the only target. That is a frozen snapshot: if
+# the SQL logic changes, the workbook follows it, the validator keeps comparing
+# against the old number and reports a failure that is really a stale
+# expectation -- or worse, both move together and it reports success. Project 3
+# in this portfolio shipped a validator holding exactly such a constant.
+#
+# Checking against both separates two different failures that a single target
+# conflates:
+#   Excel <> SQL        the workbook's formulas disagree with the database
+#   SQL   <> published  the database has moved since the documents were written
 $sqlFigures = @(
-    @{ Sheet='Dashboard'; Cell='C8';  Label='Total open AR';          Expect=10847081.49; Tol=0.005 },
-    @{ Sheet='Dashboard'; Cell='C9';  Label='Not yet due';            Expect=8095793.78;  Tol=0.005 },
-    @{ Sheet='Dashboard'; Cell='C10'; Label='Past due, disputed';     Expect=154864.71;   Tol=0.005 },
-    @{ Sheet='Dashboard'; Cell='C11'; Label='Past due, undisputed';   Expect=2596423.00;  Tol=0.005 },
-    @{ Sheet='Dashboard'; Cell='C13'; Label='Open invoices';          Expect=2346;        Tol=0.5   },
-    @{ Sheet='Dashboard'; Cell='F9';  Label='Granted days';           Expect=45.97;       Tol=0.01  },
-    @{ Sheet='Dashboard'; Cell='F10'; Label='Dispute days';           Expect=0.88;        Tol=0.01  },
-    @{ Sheet='Dashboard'; Cell='F11'; Label='Lateness days';          Expect=14.74;       Tol=0.01  },
-    @{ Sheet='Dashboard'; Cell='F12'; Label='Classic DSO';            Expect=61.59;       Tol=0.01  },
-    @{ Sheet='Dashboard'; Cell='F14'; Label='Weighted average terms'; Expect=46.68;       Tol=0.01  },
-    @{ Sheet='Dashboard'; Cell='F17'; Label='Billing lag (days)';     Expect=1.78;        Tol=0.02  },
-    @{ Sheet='Dashboard'; Cell='F18'; Label='True cash cycle (days)'; Expect=63.37;       Tol=0.02  },
-    @{ Sheet='Dashboard'; Cell='B27'; Label='Unapplied cash % of AR'; Expect=3.87;        Tol=0.02  },
-    @{ Sheet='Dashboard'; Cell='B29'; Label='Promise kept rate %';    Expect=86.29;       Tol=0.01  },
-    @{ Sheet='Calc';      Cell='C20'; Label='Countback DSO';          Expect=63.07;       Tol=0.01  },
-    @{ Sheet='Calc';      Cell='C22'; Label='Best possible DSO';      Expect=46.27;       Tol=0.02  },
-    @{ Sheet='Calc';      Cell='C23'; Label='Average days delinquent';Expect=16.80;       Tol=0.02  }
+    @{ Sheet='Dashboard'; Cell='C8';  Label='Total open AR';          Published=10847081.49; Tol=0.005;
+       Sql="SELECT SUM(OpenBalance) FROM dbo.vw_ARBalance WHERE OpenBalance > 0.005" },
+    @{ Sheet='Dashboard'; Cell='C9';  Label='Not yet due';            Published=8095793.78;  Tol=0.005;
+       Sql="SELECT CurrentAR FROM dbo.fn_DSO('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='C10'; Label='Past due, disputed';     Published=154864.71;   Tol=0.005;
+       Sql="SELECT DisputedPastDueAR FROM dbo.fn_DSOBridge('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='C11'; Label='Past due, undisputed';   Published=2596423.00;  Tol=0.005;
+       Sql="SELECT UndisputedPastDueAR FROM dbo.fn_DSOBridge('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='C13'; Label='Open invoices';          Published=2346;        Tol=0.5;
+       Sql="SELECT COUNT(*) FROM dbo.vw_ARBalance WHERE OpenBalance > 0.005" },
+    @{ Sheet='Dashboard'; Cell='F9';  Label='Granted days';           Published=45.97;       Tol=0.01;
+       Sql="SELECT GrantedDays FROM dbo.fn_DSOBridge('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='F10'; Label='Dispute days';           Published=0.88;        Tol=0.01;
+       Sql="SELECT DisputeDays FROM dbo.fn_DSOBridge('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='F11'; Label='Lateness days';          Published=14.74;       Tol=0.01;
+       Sql="SELECT LatenessDays FROM dbo.fn_DSOBridge('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='F12'; Label='Classic DSO';            Published=61.59;       Tol=0.01;
+       Sql="SELECT DSO_Classic FROM dbo.fn_DSOBridge('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='F14'; Label='Weighted average terms'; Published=46.68;       Tol=0.01;
+       Sql="SELECT WeightedAvgTermsDays FROM dbo.fn_DSOBridge('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='F17'; Label='Billing lag (days)';     Published=1.78;        Tol=0.02;
+       Sql="SELECT BillingLagDays FROM dbo.fn_DSOBridge('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='F18'; Label='True cash cycle (days)'; Published=63.37;       Tol=0.02;
+       Sql="SELECT CashCycleDays FROM dbo.fn_DSOBridge('$AsOf')" },
+    @{ Sheet='Dashboard'; Cell='B27'; Label='Unapplied cash % of AR'; Published=3.87;        Tol=0.02;
+       Sql="SELECT CAST(100.0 * (SELECT SUM(UnappliedCash) FROM dbo.vw_UnappliedCash) / NULLIF((SELECT SUM(OpenBalance) FROM dbo.vw_ARBalance WHERE OpenBalance > 0.005),0) AS DECIMAL(9,2))" },
+    @{ Sheet='Dashboard'; Cell='B29'; Label='Promise kept rate %';    Published=86.29;       Tol=0.01;
+       Sql="SELECT KeptRatePct FROM dbo.fn_PromiseKeptRate('$AsOf', 12)" },
+    @{ Sheet='Calc';      Cell='C20'; Label='Countback DSO';          Published=63.07;       Tol=0.01;
+       Sql="SELECT DSO_Countback FROM dbo.fn_DSO('$AsOf')" },
+    @{ Sheet='Calc';      Cell='C22'; Label='Best possible DSO';      Published=46.27;       Tol=0.02;
+       Sql="SELECT BPDSO_Countback FROM dbo.fn_DSO('$AsOf')" },
+    @{ Sheet='Calc';      Cell='C23'; Label='Average days delinquent';Published=16.80;       Tol=0.02;
+       Sql="SELECT AvgDaysDelinquent FROM dbo.fn_DSO('$AsOf')" }
 )
+
+function Get-SqlScalar([string]$query) {
+    $cn = New-Object System.Data.SqlClient.SqlConnection("Server=$SqlServerInst;Database=$SqlDb;Integrated Security=True;")
+    $cn.Open()
+    try {
+        $cmd = $cn.CreateCommand(); $cmd.CommandText = $query; $cmd.CommandTimeout = 300
+        $v = $cmd.ExecuteScalar()
+        if ($null -eq $v -or $v -is [System.DBNull]) { return $null }
+        return [double]$v
+    } finally { $cn.Close() }
+}
+
+Write-Host "Reading the current figures from SQL..." -ForegroundColor Cyan
+$sqlUnavailable = $false
+foreach ($f in $sqlFigures) {
+    try { $f.Expect = Get-SqlScalar $f.Sql }
+    catch {
+        # Without a database the workbook can still be checked against what was
+        # published -- which is the state a reader who only cloned the repo is
+        # in. Say so rather than failing, and do not silently call it a pass.
+        $f.Expect = $f.Published
+        $sqlUnavailable = $true
+    }
+}
+if ($sqlUnavailable) {
+    Write-Host "  SQL Server unreachable -- falling back to the PUBLISHED figures." -ForegroundColor Yellow
+    Write-Host "  This checks the workbook against the documents, not against the database." -ForegroundColor Yellow
+}
 
 $errorText = @('#REF!','#VALUE!','#NAME?','#DIV/0!','#N/A','#NULL!','#NUM!')
 $failures  = 0
@@ -81,6 +142,18 @@ try {
         $colour = if ($ok) { 'Green' } else { 'Red' }
         Write-Host ("  {0,-26} excel {1,15:N2}   sql {2,15:N2}   diff {3,10:N4}  {4}" -f `
             $f.Label, $v, $f.Expect, $diff, $(if ($ok) { 'MATCH' } else { 'DIFFERS' })) -ForegroundColor $colour
+
+        # Separately: has SQL moved away from what the documents say? This is a
+        # different failure from "Excel disagrees with SQL", and reporting them
+        # together is how a stale published figure hides behind a green run.
+        if (-not $sqlUnavailable) {
+            $drift = [math]::Abs($f.Expect - $f.Published)
+            if ($drift -gt $f.Tol) {
+                $failures++
+                Write-Host ("      ^ SQL now says {0:N2} but the README and case study publish {1:N2}. Update the documents." -f `
+                    $f.Expect, $f.Published) -ForegroundColor Red
+            }
+        }
     }
 
     # ---- 2. the workbook's own validation sheet ----------------------------

@@ -169,7 +169,7 @@ This is the pattern worth taking away from the whole engagement.
 |---|---:|:---:|---|
 | Promise kept rate | 86.29% | **Green** | High-risk tier: **53.87%** by value, 40.29% by count |
 | Billing lag | 1.78 d | **Green** | Southeast DC: **3.22 d**, drifting 1.56 → 4.78 through 2025 |
-| Credit utilisation | 17.70% | **Green** | Three accounts over limit, one at **106%** |
+| Credit utilisation | 17.70% | **Green** | One account over limit at **106%**; three above the 80% target |
 
 Every one of these aggregates is arithmetically correct and every one is operationally useless on
 its own. A portfolio average cannot breach until the whole book does; by then the cohort that
