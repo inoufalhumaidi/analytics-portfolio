@@ -51,5 +51,5 @@ case_study/     Case study PDF + HTML source
 
 - Every KPI threshold lives in one table (`dbo.Ref_KPITargets`), mirrored onto the Excel `Targets` sheet — change a number there and every dashboard, flag, and recommended action recalculates against it.
 - The `Priority_Action_Queue` (both the SQL view and the Excel sheet) outputs a ranked, actionable worklist with a specific recommended action per flagged technician — not just a chart.
-- Every SQL view has a reusable, parameterized stored procedure wrapper (`sql/05_stored_procedures.sql`) so the same logic is callable from a scheduled job, a BI tool, or an analyst's ad hoc query without re-deriving it.
+- Every published KPI view has a reusable, parameterized stored procedure wrapper (`sql/05_stored_procedures.sql`) -- the two capacity views underneath them, `vw_TechnicianDailyCapacity` and `vw_TechnicianUtilization`, are inputs rather than outputs and are read through `usp_GetTechnicianScorecard` so the same logic is callable from a scheduled job, a BI tool, or an analyst's ad hoc query without re-deriving it.
 - The data quality layer is implemented **twice, independently** — once in SQL (`sql/03_data_quality_checks.sql`) and once in Excel formulas (`Data_Quality` sheet) — and the two are cross-checked against each other rather than assumed to agree.

@@ -6,9 +6,29 @@
 
 ## 1. Generation method
 
-- **Volume:** ~40,000 job records across a 2-year window (2024-01-01 to 2025-12-31, 731 calendar days), 40 technicians (36-37 active at any time, 3-4 inactive to simulate turnover), 300 clients, 10 service types, 5 regions.
+- **Volume:** ~40,000 job records across a 2-year window (2024-01-01 to 2025-12-31, 731 calendar days), 40 technicians (35 active and 5 inactive in the current run; the split is drawn per generation, so treat it as ~90% active by design rather than a fixed count), 300 clients, 10 service types, 5 regions.
 - **Method:** set-based T-SQL — a candidate grain of (Technician × Date × Slot 1-3) is filtered down to actual jobs using per-row random draws (`RAND(CHECKSUM(NEWID()))`) weighted by deliberately-parameterized region intensity and day-of-week factors, not a purely uniform random fill. This was a conscious choice over row-by-row procedural generation (e.g., a Python script) so the entire pipeline stays inside one reusable, re-runnable SQL script with no external runtime dependency.
-- **Reproducibility:** re-running `01_create_schema.sql` then `02_generate_synthetic_data.sql` regenerates a fresh random dataset with the same *statistical* properties (same intensity/travel/skill parameters) but different specific values each time — this is intentional (demonstrates the generator is parameterized, not a fixed fixture) and is why exact row counts in this report are approximate "as of the run this report was written against" (~39,980-45,000 total jobs depending on run).
+- **Reproducibility — a known limitation of this project.** The generator draws from
+  `RAND(CHECKSUM(NEWID()))`, which is non-deterministic, so re-running `01_create_schema.sql` and
+  `02_generate_synthetic_data.sql` produces a dataset with the same *statistical* properties
+  (same intensity, travel, skill and seasonality parameters) but different specific values. Every
+  exact figure in this report and in the case study is therefore "as of the run they were written
+  against" — this run holds 37,404 jobs; expect roughly 35,000–45,000.
+
+  An earlier version of this report described that as intentional, on the grounds that it
+  "demonstrates the generator is parameterized, not a fixed fixture". That reasoning does not
+  hold: parameterized and deterministic are independent properties. Projects 2 and 3 in this
+  portfolio are both — they draw every value from `HASHBYTES('SHA2_256', <stable key>)`, so a
+  rebuild reproduces the dataset byte for byte and a UAT case asserts the fingerprints, which is
+  what makes every figure they publish checkable by a reader.
+
+  **Project 1 does not have that property, and the honest consequence is that a reader who runs
+  the scripts will not reproduce the exact numbers quoted here.** The structural findings survive
+  a rebuild — South Metro runs far below the other regions, East Valley fails the tight SLA
+  segment, first-time-fix rises monotonically with skill — because those are parameterized into
+  the generator. The specific percentages do not. Converting the generator to hash-keyed draws is
+  the outstanding remediation; it would change every published figure in this project, so it is
+  recorded here rather than done silently.
 
 ## 2. Deliberate patterns built into the generator (the "story" the KPIs are meant to surface)
 
@@ -26,10 +46,10 @@ Run against the live dataset (counts are illustrative of the validated run; re-r
 
 | Check | Method | Result |
 |---|---|---|
-| Row counts per table are within expected order of magnitude | `SELECT COUNT(*) FROM <table>` per table | Dim_Date=731, Dim_Region=5, Dim_Technician=40, Dim_Client=300, Dim_ServiceType=10, Fact_ServiceJobs≈40-45K |
+| Row counts per table are within expected order of magnitude | `SELECT COUNT(*) FROM <table>` per table | Dim_Date=731, Dim_Region=5, Dim_Technician=40, Dim_Client=300, Dim_ServiceType=10, Fact_ServiceJobs=37,404 in this run (expect ~35-45K) |
 | No orphaned foreign keys | `dbo.vw_DQ_JobAnomalies` ORPHAN_DIMENSION_KEY check | 0 found (enforced structurally by FK constraints; checked anyway as defense-in-depth) |
-| Utilization distribution is plausible (no negative/absurd values) | `SELECT MIN/MAX/AVG(UtilizationPct) FROM vw_TechnicianUtilization GROUP BY Year,Month` | Range ~23%-133% per technician-month, average ~66-77% — technicians modestly over 100% represent documented overtime/over-capacity scenarios, which is intentional (feeds the `FlagOverCapacity` check), not a data bug |
-| Regional SLA gap is real, not a rounding artifact | `SELECT RegionName, AVG(SLAMet) FROM ... WHERE SLAHours=1.0 GROUP BY RegionName` | East Valley 93.1% vs Central District 95.6% on the 1-hour-SLA segment specifically |
+| Utilization distribution is plausible (no negative/absurd values) | `SELECT MIN/MAX/AVG(UtilizationPct) FROM vw_TechnicianUtilization` | Range 21.88%–106.96% per technician-month, portfolio 65.89%. The 8 technician-months still above 100% are driven by the injected `EXTREME_DURATION` rows (1,200–1,599-minute jobs), **not** by overtime — weekend call-outs are now reported separately as `OvertimePctOfCapacity`. See §5b: an earlier version of this row claimed the over-100% months were "documented overtime", which was both wrong about the cause and hiding a real defect |
+| Regional SLA gap is real, not a rounding artifact | `SELECT RegionName, AVG(SLAMet) FROM ... WHERE SLAHours=1.0 GROUP BY RegionName` | East Valley 93.2% vs Central District 95.3% on the 1-hour-SLA segment specifically |
 | Anomaly injection rate matches design (~0.5% each) | `dbo.vw_DQ_Summary` | TIMESTAMP_INVERSION / MISSING_ACTUALS / EXTREME_DURATION each land at 0.45-0.50% of total rows |
 | Excel's independent formula re-implementation agrees with SQL | `Data_Quality` sheet in `Ridgeline_KPI_Dashboard.xlsx`, columns "Excel Count" vs "SQL Count (cross-check)" | Exact match on all three anomaly types |
 | Region-level KPI rollup reconciles between SQL and Excel | Compared `usp_GetRegionKPISummary` output to `KPI_Dashboard` sheet for the same Region/Year/Month | Total Jobs, Completed Jobs, FTF%, SLA%, Callback%, Revenue, Cost, and Margin match exactly; Utilization% differs by ≤0.1 percentage point (see Section 6 — a documented, intentional approximation) |
@@ -53,6 +73,63 @@ While cross-checking the `Priority_Action_Queue` sheet's independently-implement
 **The regression test added:** UAT-06a/06b in `sql/06_uat_test_cases.sql` gives the test technician completed jobs in two different months with known, different First-Time-Fix ratios, and asserts each month's figure matches its own isolated calculation rather than a pooled one (Jan 66.67% / Feb 100.00%, not a blended 75.00%).
 
 **Why this belongs in the report:** this is the actual argument for building the same KPI logic independently in two places (SQL views and Excel formulas) rather than having Excel simply import SQL's output. If Excel had pulled pre-aggregated numbers from `vw_TechnicianKPIMonthly`, this bug would have shipped into the case study undetected — the "operational control, not a report" design goal in `README.md` exists partly to force this kind of disagreement to surface.
+
+## 5b. The headline KPI divided two different populations (found in a later review)
+
+**Symptom:** none. Utilization read 70.46% across the book, every technician-month looked
+reasonable, the Excel workbook agreed with SQL, the UAT suite passed, and the figure had already
+been published in the README, the case study and the Power BI report.
+
+**The defect.** `vw_TechnicianDailyCapacity` models capacity on scheduled weekdays — it carries
+`AND d.IsWeekend = 0`, with a comment saying so. The `Worked` CTE in `vw_TechnicianUtilization`
+had no such filter: it summed **every** completed job. So 2,194 completed weekend jobs, 343,381
+worked minutes, went into the numerator against capacity that by construction did not exist.
+
+A ratio is only meaningful when both sides describe the same population. These did not.
+
+| | Numerator | Denominator | Portfolio utilization |
+|---|---|---|---|
+| As built | all completed jobs | weekday capacity | **70.46%** |
+| Corrected | weekday completed jobs | weekday capacity | **65.89%** |
+
+**Why nothing caught it.** Every check that existed agreed with the code because every check
+shared its assumption:
+
+- **UAT-01** hand-calculates utilization from a fixture of two jobs — both on weekdays. The test
+  and the code agreed about a case where the bug cannot appear. That is the general shape of a
+  test that passes for the wrong reason: it is not that the assertion is weak, it is that the
+  fixture never enters the broken branch.
+- **Excel cross-check** re-implemented the same formula from the same written definition, so it
+  reproduced the same mistake independently. Cross-tool agreement proves the two tools agree; it
+  does not prove either is right. That is worth stating plainly, because §5 above uses cross-tool
+  disagreement as the technique that *did* work — the method has this exact blind spot.
+- **The 26 technician-months above 100%** were the visible symptom, and §3 of this very report
+  explained them away as "documented overtime/over-capacity scenarios ... not a data bug". The
+  explanation was plausible, wrong, and load-bearing: once written down, it stopped anyone looking.
+  A number over 100% in a bounded ratio is not a curiosity to rationalise; it is the ratio telling
+  you its denominator is wrong.
+
+**The fix.** Utilization is weekday work over weekday capacity. Weekend work is not discarded — it
+is reclassified as what it actually is, and `vw_TechnicianUtilization` now also publishes
+`OvertimeMinutes`, `OvertimeJobCount` and `OvertimePctOfCapacity` (4.56% of capacity across the
+book). Folding overtime into a utilization percentage makes a team look busier than its roster
+*and* makes the overtime invisible to the person paying for it.
+
+The correction also changed the advice, not just the number: `vw_PriorityActionQueue` now tags any
+technician flagged "underutilized" who is carrying 5% or more in weekend call-outs, because
+telling that person to take on more work was the operational consequence of the bug.
+
+**Regression cover.** `UAT-07a` asserts a weekend job does not move `UtilizationPct`; `UAT-07b`
+asserts the same job appears in `OvertimeMinutes`. Both use a dedicated second fixture technician
+with one weekday job and one weekend job, so the assertion does not depend on what earlier cases
+inserted. Under the old view `UAT-07a` returns 1.93% against an expected 0.74% and fails.
+
+**Restated figures.** Portfolio utilization 70.46% → **65.89%**; December 2025 69.5% → **65.0%**;
+technician-months above 100%: 26 → **8**; maximum technician-month 119.35% → **106.96%**. Every
+document, the JSON exports, the dashboard and the Excel workbook were regenerated against the
+corrected view.
+
+---
 
 ## 6. Documented approximation: Excel vs. SQL utilization formula
 
@@ -90,7 +167,7 @@ The Power BI model is the third independent implementation of the same KPI logic
 
 ## 8. Report-layer review (pages, visuals, navigation)
 
-A full review of the draft report checked every visual's fields, filters, sort order and formatting against the guide and against SQL. Page 1's numbers reconcile exactly with no slicer selection (37,404 jobs; FTF 86.905%; SLA 98.303%; revenue $21,149,184.67; utilization 70.455% overall and 50.491% for South Metro, the lowest region). Three defects sat in the report layer rather than the data:
+A full review of the draft report checked every visual's fields, filters, sort order and formatting against the guide and against SQL. Page 1's numbers reconcile exactly with no slicer selection (37,404 jobs; FTF 86.905%; SLA 98.303%; revenue $21,149,184.67; utilization 65.891% overall and 47.243% for South Metro, the lowest region (restated after the §5b fix; the figures quoted at review time were 70.455% and 50.491%)). Three defects sat in the report layer rather than the data:
 
 | # | Defect | Evidence | Fix |
 |---|---|---|---|

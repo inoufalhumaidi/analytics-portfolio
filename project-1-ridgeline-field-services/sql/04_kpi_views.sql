@@ -53,6 +53,13 @@ WITH Capacity AS (
     FROM dbo.vw_TechnicianDailyCapacity
     GROUP BY TechnicianKey, TechnicianID, TechnicianName, RegionKey, SkillLevel, YEAR([Date]), MONTH([Date])
 ),
+-- A ratio is only meaningful when both sides describe the same population.
+-- Capacity above is modelled on scheduled WEEKDAYS, so the numerator has to be
+-- weekday work as well. Counting every completed job against weekday-only
+-- capacity put 2,194 weekend call-outs (343,381 minutes) into the numerator
+-- with no capacity behind them, and inflated utilization from 65.89% to 70.46%
+-- across the book -- while the case study described the weekday formula
+-- correctly all along.
 Worked AS (
     SELECT f.TechnicianKey, d.[Year], d.[Month],
            SUM(ISNULL(f.JobDurationMin,0) + ISNULL(f.TravelTimeMin,0)) AS WorkedMinutes,
@@ -60,6 +67,21 @@ Worked AS (
     FROM dbo.Fact_ServiceJobs f
     JOIN dbo.Dim_Date d ON d.DateKey = f.DateKey
     WHERE f.JobStatus = 'Completed'
+      AND d.IsWeekend = 0
+    GROUP BY f.TechnicianKey, d.[Year], d.[Month]
+),
+-- Weekend work is not discarded, it is reclassified. A call-out on a Saturday
+-- is real work against unscheduled time, which is what overtime means; hiding
+-- it inside a utilization percentage makes a team look busier than its roster
+-- and makes the overtime itself invisible to the person paying for it.
+Overtime AS (
+    SELECT f.TechnicianKey, d.[Year], d.[Month],
+           SUM(ISNULL(f.JobDurationMin,0) + ISNULL(f.TravelTimeMin,0)) AS OvertimeMinutes,
+           COUNT(*) AS OvertimeJobCount
+    FROM dbo.Fact_ServiceJobs f
+    JOIN dbo.Dim_Date d ON d.DateKey = f.DateKey
+    WHERE f.JobStatus = 'Completed'
+      AND d.IsWeekend = 1
     GROUP BY f.TechnicianKey, d.[Year], d.[Month]
 )
 SELECT
@@ -68,9 +90,14 @@ SELECT
     c.AvailableMinutes,
     ISNULL(w.WorkedMinutes, 0) AS WorkedMinutes,
     ISNULL(w.JobCount, 0) AS JobCount,
-    CAST(ISNULL(w.WorkedMinutes, 0) * 100.0 / NULLIF(c.AvailableMinutes, 0) AS DECIMAL(6,2)) AS UtilizationPct
+    CAST(ISNULL(w.WorkedMinutes, 0) * 100.0 / NULLIF(c.AvailableMinutes, 0) AS DECIMAL(6,2)) AS UtilizationPct,
+    ISNULL(o.OvertimeMinutes, 0) AS OvertimeMinutes,
+    ISNULL(o.OvertimeJobCount, 0) AS OvertimeJobCount,
+    CAST(ISNULL(o.OvertimeMinutes, 0) * 100.0 / NULLIF(c.AvailableMinutes, 0) AS DECIMAL(6,2)) AS OvertimePctOfCapacity,
+    ISNULL(w.WorkedMinutes, 0) + ISNULL(o.OvertimeMinutes, 0) AS TotalWorkedMinutes
 FROM Capacity c
-LEFT JOIN Worked w ON w.TechnicianKey = c.TechnicianKey AND w.[Year] = c.[Year] AND w.[Month] = c.[Month];
+LEFT JOIN Worked   w ON w.TechnicianKey = c.TechnicianKey AND w.[Year] = c.[Year] AND w.[Month] = c.[Month]
+LEFT JOIN Overtime o ON o.TechnicianKey = c.TechnicianKey AND o.[Year] = c.[Year] AND o.[Month] = c.[Month];
 GO
 
 -- =============================================================================
@@ -122,7 +149,15 @@ CREATE VIEW dbo.vw_TechnicianKPIMonthly AS
 SELECT
     u.TechnicianKey, u.TechnicianID, u.TechnicianName, u.RegionKey, r.RegionName, u.SkillLevel,
     u.[Year], u.[Month],
-    u.UtilizationPct, u.JobCount,
+    u.UtilizationPct,
+    -- JobCount here must cover EVERY completed job, because it sits beside
+    -- FirstTimeFixPct and CallbackPct, which are computed over every completed
+    -- job. u.JobCount alone is the utilization numerator's weekday count, and
+    -- publishing that next to an all-days percentage invites the reader to
+    -- multiply the two and get a number that is not a quantity of anything.
+    u.JobCount + u.OvertimeJobCount AS JobCount,
+    u.JobCount AS WeekdayJobCount,
+    u.OvertimeJobCount, u.OvertimeMinutes, u.OvertimePctOfCapacity,
     CAST(AVG(CASE WHEN f.JobStatus = 'Completed' THEN CAST(f.FirstTimeFix AS FLOAT) END) * 100.0 AS DECIMAL(6,2)) AS FirstTimeFixPct,
     CAST(AVG(CASE WHEN f.JobStatus = 'Completed' THEN CAST(f.SLAMet AS FLOAT) END) * 100.0 AS DECIMAL(6,2)) AS SLACompliancePct,
     CAST(AVG(CASE WHEN f.JobStatus = 'Completed' THEN CAST(f.CallbackFlag AS FLOAT) END) * 100.0 AS DECIMAL(6,2)) AS CallbackPct
@@ -131,7 +166,8 @@ JOIN dbo.Dim_Region r ON r.RegionKey = u.RegionKey
 LEFT JOIN dbo.Dim_Date d ON d.[Year] = u.[Year] AND d.[Month] = u.[Month]
 LEFT JOIN dbo.Fact_ServiceJobs f ON f.TechnicianKey = u.TechnicianKey AND f.DateKey = d.DateKey
 GROUP BY u.TechnicianKey, u.TechnicianID, u.TechnicianName, u.RegionKey, r.RegionName, u.SkillLevel,
-         u.[Year], u.[Month], u.UtilizationPct, u.JobCount;
+         u.[Year], u.[Month], u.UtilizationPct, u.JobCount,
+         u.OvertimeJobCount, u.OvertimeMinutes, u.OvertimePctOfCapacity;
 GO
 
 -- Fixed 2026-09-06: the original version LEFT JOINed Fact_ServiceJobs on
@@ -159,7 +195,8 @@ CREATE VIEW dbo.vw_PriorityActionQueue AS
 WITH Base AS (
     SELECT DISTINCT
         TechnicianKey, TechnicianID, TechnicianName, RegionKey, RegionName, SkillLevel,
-        [Year], [Month], UtilizationPct, JobCount, FirstTimeFixPct, SLACompliancePct, CallbackPct
+        [Year], [Month], UtilizationPct, OvertimePctOfCapacity, JobCount,
+        FirstTimeFixPct, SLACompliancePct, CallbackPct
     FROM dbo.vw_TechnicianKPIMonthly
 ),
 Targets AS (
@@ -183,7 +220,8 @@ Flagged AS (
 )
 SELECT
     TechnicianKey, TechnicianID, TechnicianName, RegionKey, RegionName, SkillLevel,
-    [Year], [Month], UtilizationPct, JobCount, FirstTimeFixPct, SLACompliancePct, CallbackPct,
+    [Year], [Month], UtilizationPct, OvertimePctOfCapacity, JobCount,
+    FirstTimeFixPct, SLACompliancePct, CallbackPct,
     FlagLowUtilization, FlagOverCapacity, FlagLowFTF, FlagLowSLA, FlagHighCallback,
     (FlagLowUtilization + FlagOverCapacity + FlagLowFTF + FlagLowSLA + FlagHighCallback) AS RiskScore,
     CONCAT_WS('; ',
@@ -191,7 +229,15 @@ SELECT
         CASE WHEN FlagOverCapacity  = 1 THEN 'Over capacity -- redistribute jobs to underutilized technicians in region' END,
         CASE WHEN FlagLowFTF        = 1 THEN 'Low first-time-fix -- pair with a Master technician or schedule refresher training' END,
         CASE WHEN FlagLowSLA        = 1 THEN 'SLA compliance below target -- review dispatch routing / travel radius' END,
-        CASE WHEN FlagHighCallback  = 1 THEN 'High callback rate -- audit recent completed jobs for rework root cause' END
+        CASE WHEN FlagHighCallback  = 1 THEN 'High callback rate -- audit recent completed jobs for rework root cause' END,
+        -- Weekend work used to be folded into utilization, so a technician
+        -- carrying real overtime could still read as underutilized and be told
+        -- to take on more jobs. Now that the two are separated, say so, or the
+        -- separation just moves the mistake from the number to the advice.
+        CASE WHEN FlagLowUtilization = 1 AND OvertimePctOfCapacity >= 5.0
+             THEN 'NOTE: weekday utilization is low but this technician is carrying '
+                  + CAST(OvertimePctOfCapacity AS VARCHAR(10))
+                  + '% of capacity again in weekend call-outs -- check the roster before reassigning work to them' END
     ) AS RecommendedAction
 FROM Flagged
 WHERE (FlagLowUtilization + FlagOverCapacity + FlagLowFTF + FlagLowSLA + FlagHighCallback) > 0;

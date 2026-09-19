@@ -109,7 +109,15 @@ BEGIN
     IF @FailCount = 0
         PRINT 'QA GATE: PASS -- all anomaly rates within the ' + CAST(@MaxAcceptableRatePct AS VARCHAR(10)) + '% threshold.';
     ELSE
+    BEGIN
         PRINT 'QA GATE: FAIL -- ' + CAST(@FailCount AS VARCHAR(10)) + ' anomaly type(s) exceed the ' + CAST(@MaxAcceptableRatePct AS VARCHAR(10)) + '% threshold. Review dbo.vw_DQ_JobAnomalies.';
+        -- A gate that only PRINTs is not a gate. sqlcmd returned exit code 0
+        -- whether this passed or failed, so no build step, scheduler or
+        -- pipeline could ever act on the result -- the word "gate" was doing
+        -- work the code was not. THROW makes the failure observable to
+        -- something other than a human reading the scrollback.
+        ;THROW 51000, 'QA gate failed: one or more anomaly rates exceed the acceptable threshold. See the report above and dbo.vw_DQ_JobAnomalies.', 1;
+    END
 END
 GO
 

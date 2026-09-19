@@ -98,7 +98,7 @@
   <div class="meta">
     <div>PREPARED FOR<b>Dispatch &amp; Operations Leadership</b></div>
     <div>REPORTING WINDOW<b>Jan 2024 – Dec 2025</b></div>
-    <div>DATASET<b>~40,000 job records</b></div>
+    <div>DATASET<b>37,404 job records</b></div>
     <div>STACK<b>SQL Server · Power BI · Excel</b></div>
   </div>
 </div>
@@ -126,15 +126,15 @@
   <h2 class="section-title">01 · Executive summary</h2>
   <p>Ridgeline Field Services dispatches HVAC and electrical technicians across five regions. Leadership's standing question was simple to ask and, until this project, expensive to answer with a spreadsheet: <strong>where is technician capacity sitting idle, and where is it overcommitted — and what, specifically, should change?</strong></p>
   <div class="kpi-row">
-    <div class="kpi"><div class="l">Dec 2025 avg. utilization</div><div class="v">69.5%</div><div class="t">target 75% · floor 60%</div></div>
+    <div class="kpi"><div class="l">Dec 2025 avg. utilization</div><div class="v">65.0%</div><div class="t">target 75% · floor 60% · +4.3% overtime</div></div>
     <div class="kpi"><div class="l">SLA compliance</div><div class="v">98.3%</div><div class="t">target 95%</div></div>
     <div class="kpi"><div class="l">First-time-fix</div><div class="v">87.0%</div><div class="t">target 90%</div></div>
     <div class="kpi"><div class="l">Gross margin, Dec 2025</div><div class="v">$575K</div><div class="t">on $1.10M revenue</div></div>
   </div>
   <p>Three findings drive the recommendations in this report:</p>
   <ol>
-    <li><strong>South Metro's utilization never once overlaps with any other region's</strong> across the full two-year window (43.0%–57.5%, vs. 63.6%+ everywhere else) — a structural staffing/dispatch imbalance, not a one-off dip.</li>
-    <li><strong>East Valley's SLA problem is invisible in the aggregate number</strong> (97.6% overall) and only appears when urgent, 1-hour-window jobs are isolated (92.3%) — a travel-distance-driven gap that a single blended KPI would hide.</li>
+    <li><strong>South Metro's utilization never once overlaps with any other region's</strong> across the full two-year window (41.1%–55.3%, vs. 59.3%+ everywhere else) — a structural staffing/dispatch imbalance, not a one-off dip.</li>
+    <li><strong>East Valley's SLA problem is invisible in the aggregate number</strong> (97.9% overall) and only appears when urgent, 1-hour-window jobs are isolated (93.2%) — a travel-distance-driven gap that a single blended KPI would hide.</li>
     <li><strong>Apprentice technicians run a callback rate roughly 4.7x higher than Master technicians</strong> (21.6% vs 4.6%), concentrated enough to show up repeatedly in the priority action queue below.</li>
   </ol>
   <p>All three are backed by a reusable SQL layer, cross-validated against an independently-built Excel formula layer — a cross-check that caught two real bugs during this project's build (Section 08), which is the actual argument for building the same logic twice rather than once.</p>
@@ -143,14 +143,14 @@
 <section>
   <h2 class="section-title">02 · Business question &amp; scope</h2>
   <p><strong>Business question:</strong> Where is technician capacity being wasted, and which dispatch decisions should change this week?</p>
-  <p>Scope: five regions (North Metro, South Metro, East Valley, West Hills, Central District), ten HVAC/Electrical service types, 40 technicians (36–37 active in any given month), 300 clients, and roughly 40,000 dispatched jobs across a 24-month window (Jan 2024–Dec 2025). Out of scope: real-time dispatch routing/GPS optimization, and multi-year demand forecasting — this is a monthly-refresh analytical model built to support a weekly dispatch-review cadence, not a live routing engine.</p>
+  <p>Scope: five regions (North Metro, South Metro, East Valley, West Hills, Central District), ten HVAC/Electrical service types, 40 technicians (35 active, 5 inactive in this generation run), 300 clients, and 37,404 dispatched jobs across a 24-month window (Jan 2024–Dec 2025). Out of scope: real-time dispatch routing/GPS optimization, and multi-year demand forecasting — this is a monthly-refresh analytical model built to support a weekly dispatch-review cadence, not a live routing engine.</p>
 </section>
 
 <section>
   <h2 class="section-title">03 · Methodology &amp; data validation</h2>
   <p>The analytical layer is a five-dimension/one-fact star schema in SQL Server (<code>Dim_Date</code>, <code>Dim_Region</code>, <code>Dim_Technician</code>, <code>Dim_Client</code>, <code>Dim_ServiceType</code>, <code>Fact_ServiceJobs</code>), plus a <code>Ref_KPITargets</code> table that centralizes every threshold used downstream — change a number there and the SQL views, the Excel dashboard, and the Power BI conditional formatting all move together.</p>
   <p>The dataset is <strong>synthetic by design, not by necessity</strong> — a set-based T-SQL generator built in deliberate, documented imbalances (region workload intensity, travel-time baselines, skill-driven fix probabilities, HVAC/Electrical seasonality) so the KPI layer would have something real to find. It was then profiled — row counts, referential integrity, distribution sanity checks — before any dashboard was built on top of it. The full write-up, including a generation bug the profiling step caught (technicians dispatched before their hire date), is in <code>docs/data_validation_report.md</code>.</p>
-  <p>Every KPI is implemented as a parameterized SQL view/procedure (<code>sql/04_kpi_views.sql</code>, <code>sql/05_stored_procedures.sql</code>) and then <strong>re-implemented independently</strong> as live formulas in the Excel workbook — SUMIFS/AVERAGEIFS against a 40,000-row table, not a paste of query results. The two are cross-checked against each other rather than assumed to agree (Section 08).</p>
+  <p>Every KPI is implemented as a parameterized SQL view/procedure (<code>sql/04_kpi_views.sql</code>, <code>sql/05_stored_procedures.sql</code>) and then <strong>re-implemented independently</strong> as live formulas in the Excel workbook — SUMIFS/AVERAGEIFS against a 37,404-row table, not a paste of query results. The two are cross-checked against each other rather than assumed to agree (Section 08).</p>
 </section>
 
 <section>
@@ -165,7 +165,7 @@
   </div>
   <p style="font-size:11px; color:var(--ink-muted);">Red marker = 75% target. Source: <code>dbo.vw_RegionKPIMonthly</code>, cross-checked against <code>KPI_Dashboard</code> in the Excel workbook (exact match).</p>
   <div class="callout finding">
-    <p><strong>This is not a one-month anomaly.</strong> Across all 24 months, South Metro's utilization ranges 43.0%–57.5% and <strong>never once overlaps</strong> with any other region's range (the next-lowest region, West Hills, never drops below 63.6%). South Metro is authorized for 8 technicians against a workload that consistently supports fewer. At the other end, East Valley averages the highest utilization of the five regions (79.2%), and several of its individual technicians post &gt;95% utilization in a given month — an over-capacity/burnout risk (see the priority queue in Section 07).</p>
+    <p><strong>This is not a one-month anomaly.</strong> Across all 24 months, South Metro's utilization ranges 41.1%–55.3% and <strong>never once overlaps</strong> with any other region's range (the next-lowest region, West Hills, never drops below 59.3%). South Metro is authorized for 8 technicians against a workload that consistently supports fewer. At the other end, East Valley averages the highest utilization of the five regions (79.2%), and several of its individual technicians post &gt;95% utilization in a given month — an over-capacity/burnout risk (see the priority queue in Section 07).</p>
   </div>
 </section>
 
@@ -189,23 +189,23 @@
   <h2 class="section-title">06 · Finding 3 — Skill-driven rework</h2>
   <table>
     <tr><th>Skill level</th><th class="num">First-time-fix</th><th class="num">Callback rate</th><th class="num">Completed jobs</th></tr>
-    <tr><td>Apprentice</td><td class="num bad">78.4%</td><td class="num bad">21.6%</td><td class="num">7,192</td></tr>
-    <tr><td>Journeyman</td><td class="num">88.0%</td><td class="num">12.0%</td><td class="num">26,473</td></tr>
-    <tr><td>Master</td><td class="num good-txt">95.4%</td><td class="num good-txt">4.6%</td><td class="num">3,739</td></tr>
+    <tr><td>Apprentice</td><td class="num bad">78.4%</td><td class="num bad">21.6%</td><td class="num">6,477</td></tr>
+    <tr><td>Journeyman</td><td class="num">88.0%</td><td class="num">12.0%</td><td class="num">23,845</td></tr>
+    <tr><td>Master</td><td class="num good-txt">95.4%</td><td class="num good-txt">4.6%</td><td class="num">3,378</td></tr>
   </table>
-  <p>The gradient is clean and monotonic across all three skill tiers — Apprentices run a callback rate roughly 4.7x Master technicians' — and it is the single most consistent driver behind the "Low first-time-fix" and "High callback" flags in the priority queue below: 12 of the 15 technicians on this month's queue carry at least one of those two flags.</p>
+  <p>The gradient is clean and monotonic across all three skill tiers — Apprentices run a callback rate roughly 4.7x Master technicians' — and it is the single most consistent driver behind the "Low first-time-fix" and "High callback" flags in the priority queue below: 17 of the 25 technicians on December 2025's queue carry at least one of those two flags.</p>
 </section>
 
 <section>
   <h2 class="section-title">07 · The priority action queue as an operational control</h2>
   <p>Every KPI above rolls up into a single, ranked worklist — this is the artifact meant to actually change a dispatch manager's Monday, not just inform it. A technician appears here when they breach one or more thresholds in <code>Ref_KPITargets</code>; the risk score is a simple count of breaches, and the recommended action is generated directly from which thresholds were crossed.</p>
   <table>
-    <tr><th>Technician</th><th>Region</th><th class="num">Util.</th><th class="num">FTF</th><th class="num">SLA</th><th class="num">Callback</th><th class="num">Risk</th><th>Action</th></tr>
-    <tr><td>Dakota Mendez</td><td>South Metro</td><td class="num bad">58.0%</td><td class="num bad">75.0%</td><td class="num">100.0%</td><td class="num bad">25.0%</td><td class="num"><span class="pill critical">3</span></td><td style="font-size:11.5px;">Underutilized; low FTF; high callback</td></tr>
-    <tr><td>Hayden Weber</td><td>South Metro</td><td class="num bad">54.8%</td><td class="num">85.7%</td><td class="num">97.6%</td><td class="num bad">14.3%</td><td class="num"><span class="pill warning">2</span></td><td style="font-size:11.5px;">Underutilized; high callback</td></tr>
-    <tr><td>Emerson Larsen</td><td>South Metro</td><td class="num">63.2%</td><td class="num bad">76.7%</td><td class="num">97.7%</td><td class="num bad">23.3%</td><td class="num"><span class="pill warning">2</span></td><td style="font-size:11.5px;">Low FTF; high callback</td></tr>
-    <tr><td>Sage Adeyemi</td><td>Central District</td><td class="num">63.2%</td><td class="num bad">83.0%</td><td class="num">100.0%</td><td class="num bad">17.0%</td><td class="num"><span class="pill warning">2</span></td><td style="font-size:11.5px;">Low FTF; high callback</td></tr>
-    <tr><td colspan="8" style="text-align:center; color:var(--ink-muted); font-size:11.5px;">+ 11 more, ranked by risk score — full list in the live dashboard and <code>excel/Ridgeline_KPI_Dashboard.xlsx</code></td></tr>
+    <tr><th>Technician</th><th>Region</th><th class="num">Util.</th><th class="num">Overtime</th><th class="num">FTF</th><th class="num">SLA</th><th class="num">Callback</th><th class="num">Risk</th><th>Action</th></tr>
+    <tr><td>Dakota Mendez</td><td>South Metro</td><td class="num bad">50.6%</td><td class="num">7.4%</td><td class="num bad">75.0%</td><td class="num">100.0%</td><td class="num bad">25.0%</td><td class="num"><span class="pill critical">3</span></td><td style="font-size:11.5px;">Underutilized on weekdays <em>but carrying 7.4% overtime</em>; low FTF; high callback</td></tr>
+    <tr><td>Emerson Larsen</td><td>South Metro</td><td class="num bad">56.8%</td><td class="num">6.4%</td><td class="num bad">76.7%</td><td class="num">97.7%</td><td class="num bad">23.3%</td><td class="num"><span class="pill critical">3</span></td><td style="font-size:11.5px;">Underutilized on weekdays <em>but carrying 6.4% overtime</em>; low FTF; high callback</td></tr>
+    <tr><td>Hayden Weber</td><td>South Metro</td><td class="num bad">48.7%</td><td class="num">6.1%</td><td class="num">85.7%</td><td class="num">97.6%</td><td class="num bad">14.3%</td><td class="num"><span class="pill warning">2</span></td><td style="font-size:11.5px;">Underutilized on weekdays <em>but carrying 6.1% overtime</em>; high callback</td></tr>
+    <tr><td>Robin Park</td><td>West Hills</td><td class="num">62.1%</td><td class="num">1.3%</td><td class="num bad">79.5%</td><td class="num">95.5%</td><td class="num bad">20.5%</td><td class="num"><span class="pill warning">2</span></td><td style="font-size:11.5px;">Low FTF; high callback</td></tr>
+    <tr><td colspan="9" style="text-align:center; color:var(--ink-muted); font-size:11.5px;">+ 21 more, ranked by risk score — full list in the live dashboard and <code>excel/Ridgeline_KPI_Dashboard.xlsx</code></td></tr>
   </table>
   <p style="font-size:11px; color:var(--ink-muted);">Source: <code>dbo.vw_PriorityActionQueue</code>, reproduced independently by formula in the Excel <code>Priority_Action_Queue</code> sheet.</p>
 </section>
@@ -236,7 +236,7 @@
   <div class="rec-card">
     <div class="owner">Dispatch Manager · This week</div>
     <h4>Rebalance South Metro against North Metro before adding headcount anywhere</h4>
-    <p>South Metro's structural underutilization (averaging 50.5%, and never overlapping any other region's range across 24 months) should be addressed by demand-shifting or reallocating routing before authorizing any new hires in higher-intensity regions — the capacity gap is a distribution problem first, a headcount problem only if rebalancing doesn't close it.</p>
+    <p>South Metro's structural underutilization (averaging 47.2%, and never overlapping any other region's range across 24 months) should be addressed by demand-shifting or reallocating routing before authorizing any new hires in higher-intensity regions — the capacity gap is a distribution problem first, a headcount problem only if rebalancing doesn't close it.</p>
   </div>
   <div class="rec-card">
     <div class="owner">Regional Ops Lead, East Valley · This month</div>

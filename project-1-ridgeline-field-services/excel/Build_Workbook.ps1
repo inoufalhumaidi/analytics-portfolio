@@ -65,7 +65,13 @@ SELECT
     CAST(f.SLAMet AS INT) AS SLAMet,
     f.JobCost,
     f.JobRevenue,
-    f.JobStatus
+    f.JobStatus,
+    -- Carried so the workbook's utilization formula can restrict its NUMERATOR
+    -- to weekdays. NETWORKDAYS already restricts the denominator, and for a
+    -- long time nothing restricted the numerator -- so Excel divided every
+    -- completed job by weekday-only capacity and reproduced the SQL defect
+    -- exactly. The two tools agreed, which is what made it invisible.
+    CAST(d.IsWeekend AS INT) AS IsWeekend
 FROM dbo.Fact_ServiceJobs f
 JOIN dbo.Dim_Date d ON d.DateKey = f.DateKey
 JOIN dbo.Dim_Region r ON r.RegionKey = f.RegionKey
@@ -268,7 +274,7 @@ $wsQueue.Range($wsQueue.Cells.Item($firstDataRow,5), $wsQueue.Cells.Item($lastDa
 $formulaArr = New-Object 'object[,]' $nTech,7
 for ($i=0; $i -lt $nTech; $i++) {
     $rr = $firstDataRow + $i
-    $formulaArr[$i,0] = "=IFERROR((SUMIFS(tblJobs[JobDurationMin],tblJobs[TechnicianID],`$A$rr,tblJobs[Year],KPI_Dashboard!`$B`$5,tblJobs[Month],KPI_Dashboard!`$B`$6,tblJobs[JobStatus],`"Completed`")+SUMIFS(tblJobs[TravelTimeMin],tblJobs[TechnicianID],`$A$rr,tblJobs[Year],KPI_Dashboard!`$B`$5,tblJobs[Month],KPI_Dashboard!`$B`$6,tblJobs[JobStatus],`"Completed`"))/(MAX(1,NETWORKDAYS(MAX(`$E$rr,DATE(KPI_Dashboard!`$B`$5,KPI_Dashboard!`$B`$6,1)),EOMONTH(DATE(KPI_Dashboard!`$B`$5,KPI_Dashboard!`$B`$6,1),0)))*480),0)"
+    $formulaArr[$i,0] = "=IFERROR((SUMIFS(tblJobs[JobDurationMin],tblJobs[TechnicianID],`$A$rr,tblJobs[Year],KPI_Dashboard!`$B`$5,tblJobs[Month],KPI_Dashboard!`$B`$6,tblJobs[JobStatus],`"Completed`",tblJobs[IsWeekend],0)+SUMIFS(tblJobs[TravelTimeMin],tblJobs[TechnicianID],`$A$rr,tblJobs[Year],KPI_Dashboard!`$B`$5,tblJobs[Month],KPI_Dashboard!`$B`$6,tblJobs[JobStatus],`"Completed`",tblJobs[IsWeekend],0))/(MAX(1,NETWORKDAYS(MAX(`$E$rr,DATE(KPI_Dashboard!`$B`$5,KPI_Dashboard!`$B`$6,1)),EOMONTH(DATE(KPI_Dashboard!`$B`$5,KPI_Dashboard!`$B`$6,1),0)))*480),0)"
     $formulaArr[$i,1] = "=IFERROR(AVERAGEIFS(tblJobs[FirstTimeFix],tblJobs[TechnicianID],`$A$rr,tblJobs[Year],KPI_Dashboard!`$B`$5,tblJobs[Month],KPI_Dashboard!`$B`$6,tblJobs[JobStatus],`"Completed`"),`"`")"
     $formulaArr[$i,2] = "=IFERROR(AVERAGEIFS(tblJobs[SLAMet],tblJobs[TechnicianID],`$A$rr,tblJobs[Year],KPI_Dashboard!`$B`$5,tblJobs[Month],KPI_Dashboard!`$B`$6,tblJobs[JobStatus],`"Completed`"),`"`")"
     $formulaArr[$i,3] = "=IFERROR(AVERAGEIFS(tblJobs[CallbackFlag],tblJobs[TechnicianID],`$A$rr,tblJobs[Year],KPI_Dashboard!`$B`$5,tblJobs[Month],KPI_Dashboard!`$B`$6,tblJobs[JobStatus],`"Completed`"),`"`")"
@@ -350,7 +356,11 @@ $regionCrit = "IF(`$B`$4=`"All`",`"*`",`$B`$4)"
 $dashRows = @(
     @{ Name="Total Jobs"; Formula="=COUNTIFS(tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6)"; Target=""; Warn=""; Fmt="#,##0" },
     @{ Name="Completed Jobs"; Formula="=COUNTIFS(tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`")"; Target=""; Warn=""; Fmt="#,##0" },
-    @{ Name="Utilization %"; Formula="=IFERROR((SUMIFS(tblJobs[JobDurationMin],tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`")+SUMIFS(tblJobs[TravelTimeMin],tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`"))/(NETWORKDAYS(DATE(`$B`$5,`$B`$6,1),EOMONTH(DATE(`$B`$5,`$B`$6,1),0))*480*COUNTIFS(Priority_Action_Queue!`$C`$${firstDataRow}:`$C`$${lastDataRow},$regionCrit)),0)"; Target="=Target_UtilizationPct/100"; Warn="=Warn_UtilizationPct/100"; Fmt="0.0%" },
+    # NUMERATOR restricted to weekdays to match NETWORKDAYS in the denominator.
+    @{ Name="Utilization %"; Formula="=IFERROR((SUMIFS(tblJobs[JobDurationMin],tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`",tblJobs[IsWeekend],0)+SUMIFS(tblJobs[TravelTimeMin],tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`",tblJobs[IsWeekend],0))/(NETWORKDAYS(DATE(`$B`$5,`$B`$6,1),EOMONTH(DATE(`$B`$5,`$B`$6,1),0))*480*COUNTIFS(Priority_Action_Queue!`$C`$${firstDataRow}:`$C`$${lastDataRow},$regionCrit)),0)"; Target="=Target_UtilizationPct/100"; Warn="=Warn_UtilizationPct/100"; Fmt="0.0%" },
+    # Weekend call-outs, as a share of the same weekday capacity -- the figure
+    # that was previously buried inside Utilization % and therefore invisible.
+    @{ Name="Overtime % of capacity"; Formula="=IFERROR((SUMIFS(tblJobs[JobDurationMin],tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`",tblJobs[IsWeekend],1)+SUMIFS(tblJobs[TravelTimeMin],tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`",tblJobs[IsWeekend],1))/(NETWORKDAYS(DATE(`$B`$5,`$B`$6,1),EOMONTH(DATE(`$B`$5,`$B`$6,1),0))*480*COUNTIFS(Priority_Action_Queue!`$C`$${firstDataRow}:`$C`$${lastDataRow},$regionCrit)),0)"; Target=""; Warn=""; Fmt="0.0%" },
     @{ Name="First-Time-Fix %"; Formula="=IFERROR(AVERAGEIFS(tblJobs[FirstTimeFix],tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`"),0)"; Target="=Target_FirstTimeFixPct/100"; Warn="=Warn_FirstTimeFixPct/100"; Fmt="0.0%" },
     @{ Name="SLA Compliance %"; Formula="=IFERROR(AVERAGEIFS(tblJobs[SLAMet],tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`"),0)"; Target="=Target_SLACompliancePct/100"; Warn="=Warn_SLACompliancePct/100"; Fmt="0.0%" },
     @{ Name="Callback %"; Formula="=IFERROR(AVERAGEIFS(tblJobs[CallbackFlag],tblJobs[RegionName],$regionCrit,tblJobs[Year],`$B`$5,tblJobs[Month],`$B`$6,tblJobs[JobStatus],`"Completed`"),0)"; Target="=Target_CallbackPct/100"; Warn="=Warn_CallbackPct/100"; Fmt="0.0%" },
@@ -368,18 +378,35 @@ foreach ($row in $dashRows) {
     if ($row.Warn -ne "")   { $wsDash.Cells.Item($dr,4).Formula = $row.Warn;   $wsDash.Cells.Item($dr,4).NumberFormat = $row.Fmt }
     $dr++
 }
-# Fix Gross Margin formula to reference actual rows (Total Revenue / Total Cost rows)
-$revRow = $dashHeaderRow + 1 + 6   # 7th data row (index 6) = Total Revenue
-$costRow = $dashHeaderRow + 1 + 7  # 8th data row = Total Cost
-$marginRow = $dashHeaderRow + 1 + 8
+# Row positions are looked up BY NAME, never by a hardcoded index.
+#
+# They used to be hardcoded ($dashHeaderRow + 1 + 6, + 7, + 8 ...). Inserting a
+# single KPI row above them shifted every later row by one, so Gross Margin was
+# written onto the Total Cost row as "Callback % minus Total Revenue" and the
+# workbook reported Total Cost = -163,307.32: right magnitude, wrong sign, no
+# error value anywhere, and every cell still green. Nothing structural could
+# see it -- it was caught by reopening the file and reading the number back.
+#
+# The lookup throws rather than returning a default, so renaming a KPI fails
+# the build instead of quietly repointing a formula at its neighbour.
+function Get-DashRow([string]$name) {
+    for ($i = 0; $i -lt $dashRows.Count; $i++) {
+        if ($dashRows[$i].Name -eq $name) { return $dashHeaderRow + 1 + $i }
+    }
+    throw "KPI row '$name' not found on KPI_Dashboard -- the row list changed but a reference to it did not."
+}
+
+$revRow    = Get-DashRow "Total Revenue"
+$costRow   = Get-DashRow "Total Cost"
+$marginRow = Get-DashRow "Gross Margin"
 $wsDash.Cells.Item($marginRow,2).Formula = "=B$revRow-B$costRow"
 $wsDash.Cells.Item($marginRow,2).NumberFormat = "$#,##0"
 
 # Conditional formatting: Value vs Warning for the 4 rate KPIs (Utilization, FTF, SLA, Callback)
-$utilRow = $dashHeaderRow + 3
-$ftfRow = $dashHeaderRow + 4
-$slaRow = $dashHeaderRow + 5
-$cbRow = $dashHeaderRow + 6
+$utilRow = Get-DashRow "Utilization %"
+$ftfRow  = Get-DashRow "First-Time-Fix %"
+$slaRow  = Get-DashRow "SLA Compliance %"
+$cbRow   = Get-DashRow "Callback %"
 foreach ($rowNum in @($utilRow,$ftfRow,$slaRow)) {
     $cell = $wsDash.Range($wsDash.Cells.Item($rowNum,2), $wsDash.Cells.Item($rowNum,2))
     $fcGood = $cell.FormatConditions.Add(1, 3, "=`$D`$$rowNum")  # >= warning

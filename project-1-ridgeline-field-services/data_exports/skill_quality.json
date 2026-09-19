@@ -1,1 +1,1 @@
-[{"SkillLevel":"Apprentice","FTFPct":78.4,"CallbackPct":21.6,"Jobs":7192},{"SkillLevel":"Journeyman","FTFPct":88.0,"CallbackPct":12.0,"Jobs":26473},{"SkillLevel":"Master","FTFPct":95.4,"CallbackPct":4.6,"Jobs":3739}]
+[{"SkillLevel":"Apprentice","FTFPct":78.4,"CallbackPct":21.6,"Jobs":7192,"CompletedJobs":6477},{"SkillLevel":"Journeyman","FTFPct":88,"CallbackPct":12,"Jobs":26473,"CompletedJobs":23845},{"SkillLevel":"Master","FTFPct":95.4,"CallbackPct":4.6,"Jobs":3739,"CompletedJobs":3378}]

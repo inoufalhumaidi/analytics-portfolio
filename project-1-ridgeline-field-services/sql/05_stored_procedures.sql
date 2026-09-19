@@ -28,6 +28,17 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- Reject bad arguments instead of returning an empty result set. An empty
+    -- grid reads as "no jobs in that period", which is a finding; it should
+    -- read as "you asked for month 13", which is a mistake. The two look
+    -- identical to the caller, and only one of them is safe to act on.
+    IF @StartMonth NOT BETWEEN 1 AND 12 OR @EndMonth NOT BETWEEN 1 AND 12
+        THROW 51001, 'StartMonth and EndMonth must each be between 1 and 12.', 1;
+    IF (@EndYear * 100 + @EndMonth) < (@StartYear * 100 + @StartMonth)
+        THROW 51002, 'The end of the range falls before its start.', 1;
+    IF @RegionCode IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.Dim_Region WHERE RegionCode = @RegionCode)
+        THROW 51003, 'RegionCode not found in Dim_Region.', 1;
+
     DECLARE @StartKey INT = @StartYear * 100 + @StartMonth;
     DECLARE @EndKey   INT = @EndYear   * 100 + @EndMonth;
 
@@ -55,6 +66,11 @@ CREATE PROCEDURE dbo.usp_GetPriorityActionQueue
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    IF @Month NOT BETWEEN 1 AND 12
+        THROW 51004, 'Month must be between 1 and 12.', 1;
+    IF @TopN IS NULL OR @TopN < 1
+        THROW 51005, 'TopN must be at least 1.', 1;
 
     SELECT TOP (@TopN)
         TechnicianID, TechnicianName, RegionName, SkillLevel,
