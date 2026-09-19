@@ -21,7 +21,7 @@ Every project follows the same standard:
 | 1 | [Ridgeline Field Services: Operational Efficiency](project-1-ridgeline-field-services/) | Where is technician capacity being wasted, and which dispatch decisions should change this week? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
 | 2 | [Vantage Wholesale Supply: Receivables Performance](project-2-vantage-receivables/) | Of the days DSO has risen, how many did we grant through longer terms, how many are customers taking, and how many are our own unapplied cash — and who should collections call first? | Excel · Power Query · SQL | ✅ Complete |
 | 3 | [Lumen Optics Manufacturing: Photonics Spend Scorecard](project-3-lumen-optics-spend/) | Our prices are flat and every variance report is green — so why is material cost per accepted unit rising, and where should sourcing renegotiate first? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
-| 4 | Talon Robotics: Payload Deployment Delivery | Is the new payload ready to ship, and what is still open? | Requirements · Traceability · UAT · RAID | Planned |
+| 4 | [Talon Robotics: Payload Deployment Delivery](project-4-talon-robotics/) | Is the new payload ready to ship, and what is still open? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
 | 5 | Meridian UAV Services: Predictive Maintenance | Which airframes need maintenance before their next mission? | Python · SQL · Streamlit · public + synthetic data | Planned |
 
 ## Project 1 at a glance
@@ -66,3 +66,16 @@ each vendor against itself. On an index where 100 means "best available", that r
 Three defects in the validation report are worth reading: a planted pattern that silently never existed because an `UPDATE` matched zero rows; a contract-lapse rule that produced the opposite of a lapse, caught only because a figure refused to move when its driver doubled; and a window function inside a `CROSS APPLY` that saw a single row and reported "100% of vendor-part pairs holding price flat" directly beneath a table showing prices falling. See [`docs/data_validation_report.md`](project-3-lumen-optics-spend/docs/data_validation_report.md).
 
 Start with the project [README](project-3-lumen-optics-spend/README.md) for the reproduction steps.
+
+## Project 4 at a glance
+
+- **A metric that answers a different question from the one on the agenda.** The programme reports **93.86% complete**; it is **51.96% ready to ship**. Both are correct — work-item completion counts effort, and shipping depends on evidence. The 42-point gap sat invisible because only one of the two was ever reported.
+- **A verification is evidence about ONE BUILD.** If a requirement passed on build 62 and its subsystem changed in build 71, the requirements tool still says Verified and is describing code that has since been replaced. Modelling a test run as a dated fact carrying a `BuildKey`, alongside a record of what each build touched, makes staleness *computable* rather than asserted — the same shape as Project 3's dated price agreements. Age is explicitly **not** the rule: intervening change is.
+- **Rig contention is not a second problem, it is the cause.** A release-candidate regression re-runs everything cheap and automated, so what misses it is whatever needs the scarce resource — the hardware rig at ~74% and the airframe at ~54%, against ~90% for automated tests. Stale evidence therefore lands hardest on exactly the Safety and Regulatory requirements whose policy *demands* hardware evidence. That makes "verification is behind" and "we cannot book rig time" one item on the risk register rather than two.
+- **113 requirements are verified by evidence that does not count** — 110 passing below the test level their type demands, 20 signed off by their own author against a policy requiring an independent witness. Both read as a pass on every dashboard the programme runs. Policy compliance: **77.45%**.
+- **The gap sits where the design is still moving.** Flight Control (45 builds changed, **23.40%** ready) and Release Mechanism (42 builds, **32.26%**) carry 39% of all must-ship requirements. They are not behind on testing; re-running their suites buys evidence the next build invalidates.
+- **A queue bounded by the constraining resource**: 226 outstanding, **610 rig hours — 3.4 rig-weeks** — with 40 schedulable in the first week, and the action chosen by state rather than rank, because a requirement whose *wording* changed needs a systems engineer before it needs a rig.
+
+Three defects in the validation report are worth reading: a function that accepted an as-of parameter and ignored it for one metric, drawing a flat line across twenty months; a UAT harness that dropped its own results table on rollback and so reported `Invalid object name` instead of the failures, reachable only when a test failed; and a fixture that silently stopped testing anything after the generator was tuned. See [`docs/data_validation_report.md`](project-4-talon-robotics/docs/data_validation_report.md).
+
+Start with the project [README](project-4-talon-robotics/README.md) for the reproduction steps.

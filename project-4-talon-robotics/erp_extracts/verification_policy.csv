@@ -1,0 +1,6 @@
+﻿"ReqType","MinTestLevel","MinTestLevelRank","RequiresIndependentTester","PolicyNote"
+"Regulatory","Field","4","1","Certification evidence must come from the airframe, independently witnessed. Rig data is not accepted by the authority."
+"Performance","HIL","3","0","Timing and power figures measured in software are estimates. Performance is verified on the rig or not at all."
+"Safety","HIL","3","1","Safety requirements are verified on hardware and by someone other than the author. Both halves are the rule; either alone has failed before."
+"Functional","Integration","2","0","Interfaces must be exercised against real neighbours. A unit test proves the author's intent, not the behaviour."
+"Interface","Integration","2","0","An interface is verified when both sides run together. A mock agrees with whatever it was written to agree with."
