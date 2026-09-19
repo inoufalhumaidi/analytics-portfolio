@@ -1,0 +1,99 @@
+{
+  "horizon_flight_hours": 40.0,
+  "train_fraction": 0.7,
+  "min_precision_pct": 75.0,
+  "feature_sets": {
+    "telemetry": {
+      "auc": 0.9783,
+      "average_precision": 0.8564,
+      "operating_point": {
+        "threshold": 0.8,
+        "population": "221",
+        "failures": "90",
+        "alerts": "119",
+        "tp": "90",
+        "fp": "29",
+        "fn": "0",
+        "tn": "102",
+        "actionable_tp": "82",
+        "late_tp": "8",
+        "precision_pct": 75.63,
+        "recall_pct": 100.0,
+        "actionable_lead_time_pct": 91.11,
+        "preventable_failure_pct": 91.11,
+        "median_lead_time_flight_hours": 26.82
+      }
+    },
+    "exposure": {
+      "auc": 0.6775,
+      "average_precision": 0.184,
+      "operating_point": null
+    },
+    "both": {
+      "auc": 0.9986,
+      "average_precision": 0.9901,
+      "operating_point": {
+        "threshold": 0.05,
+        "population": "221",
+        "failures": "90",
+        "alerts": "106",
+        "tp": "90",
+        "fp": "16",
+        "fn": "0",
+        "tn": "115",
+        "actionable_tp": "90",
+        "late_tp": "0",
+        "precision_pct": 84.91,
+        "recall_pct": 100.0,
+        "actionable_lead_time_pct": 100.0,
+        "preventable_failure_pct": 100.0,
+        "median_lead_time_flight_hours": 43.92
+      }
+    }
+  },
+  "deployed_fixed_threshold": {
+    "threshold": 3.4,
+    "population": 221,
+    "failures": 90,
+    "alerts": 115,
+    "tp": 89,
+    "fp": 26,
+    "fn": 1,
+    "tn": 105,
+    "actionable_tp": 34,
+    "late_tp": 55,
+    "precision_pct": 77.39,
+    "recall_pct": 98.89,
+    "actionable_lead_time_pct": 38.2,
+    "preventable_failure_pct": 37.78,
+    "median_lead_time_flight_hours": 13.18
+  },
+  "sql_reconciliation": {
+    "pandas": {
+      "threshold": 3.4,
+      "population": 734,
+      "failures": 288,
+      "alerts": 347,
+      "tp": 283,
+      "fp": 64,
+      "fn": 5,
+      "tn": 382,
+      "actionable_tp": 107,
+      "late_tp": 176,
+      "precision_pct": 81.56,
+      "recall_pct": 98.26,
+      "actionable_lead_time_pct": 37.81,
+      "preventable_failure_pct": 37.15,
+      "median_lead_time_flight_hours": 13.38
+    },
+    "tsql": {
+      "tp": 283,
+      "fp": 64,
+      "fn": 5,
+      "actionable_tp": 107,
+      "population": 734
+    },
+    "agree": true
+  },
+  "source": "SQL Server localhost\\TEW_SQLEXPRESS/MeridianUAV via SQL Server"
+}

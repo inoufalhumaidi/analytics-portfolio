@@ -1,0 +1,7 @@
+﻿"ProfileCode","StressMultiplier","CyclePenaltyHours","PayloadPenaltyPerKg","SourceNote"
+"MOUNTAIN","2.400","0.060","0.0085","Sustained high power at density altitude, with thermal turbulence. The largest hourly multiplier in the fleet and the reason the finding exists."
+"CARGO","2.050","0.040","0.0110","Continuous high rotor loading at maximum payload. Lower turbulence than mountain work but the highest payload penalty."
+"SAR","1.850","0.070","0.0060","Hover-heavy with an unpredictable profile, frequently flown in degraded conditions. Wide variance around this figure."
+"URBAN","1.350","0.055","0.0040","Turbulence loading from building wake plus a high landing count. The cycle penalty dominates the hourly multiplier on short sorties."
+"TRAINING","1.150","0.095","0.0010","Light payload reduces hourly loading, but circuit work produces far more landings per hour than any other profile. Training flies below the 12kg nominal, so the payload term goes NEGATIVE for this profile and removes stress -- which is the intent. A negative coefficient here would have added stress to a lighter aircraft."
+"COASTAL","1.000","0.020","0.0000","Baseline. Nominal payload, stable air, minimal thermal cycling. All other profiles are expressed relative to this."

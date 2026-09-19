@@ -1,0 +1,7 @@
+﻿"ComponentCode","ComponentName","PositionsPerAirframe","Criticality","LeadTimeFlightHours"
+"AIRDATA","Air data and pitot module","1","MissionCritical","6.0"
+"BATT-PACK","Main battery pack","2","FlightCritical","8.0"
+"GIMBAL","Payload gimbal","1","MissionCritical","24.0"
+"LANDGEAR","Landing gear assembly","1","Degraded","4.0"
+"MOTOR-ESC","Motor and speed controller","4","FlightCritical","12.0"
+"ROTOR-ASSY","Rotor assembly and bearing","4","FlightCritical","18.0"

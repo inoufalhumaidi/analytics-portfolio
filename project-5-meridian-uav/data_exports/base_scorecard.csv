@@ -1,0 +1,5 @@
+﻿"BaseCode","BaseName","Region","HangarBays","Airframes","FlightHours","StressHours","StressRatio","FittedComponents","HourCompliancePct","StressCompliancePct","ComplianceGapPoints","HiddenOverdue","HiddenOverdueFlightCritical","UnscheduledRatePct","MaintenanceEvents","DowntimeHours"
+"PORT","Port Logistics Hub","East Estuary","3","7","4113.65","8243.56","2.0040","91","98.90","57.14","41.76","38","27","40.14","147","1350.6"
+"ACADEMY","Training Academy","Central Plain","2","4","1359.57","2527.95","1.8594","52","100.00","57.69","42.31","22","17","41.67","48","496.6"
+"HIGHLND","Highland Operations","North Highlands","3","7","4106.12","8841.26","2.1532","91","100.00","62.64","37.36","34","29","51.01","149","1663.7"
+"COASTAL","Coastal Survey Base","West Coast","4","10","5572.45","6542.66","1.1741","130","100.00","84.62","15.38","20","16","17.86","168","1268.2"

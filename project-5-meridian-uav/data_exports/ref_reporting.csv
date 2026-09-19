@@ -1,0 +1,5 @@
+﻿"SettingName","SettingValue","Description"
+"AlertVibThreshold","3.40","Vibration multiple of a component's own baseline at which an alert is raised. Set to the LOWEST threshold at which rotor-assembly precision reaches its 75 percent target -- the operating point a programme tuning for trustworthy alerts would actually choose. Lowering it buys lead time and loses precision; that trade-off is the point."
+"HangarHoursPerWeek","120.0","Maintenance capacity available to the fleet per week. Changing it re-cuts the action queue, which is how the question ""what if we add a bay"" gets answered without editing anything."
+"ReportingAsOfDate","2026-09-30","The date every as-of figure is computed at. Pinned rather than derived from the data so a published number stays reproducible after the next load."
+"TrailingWindowMonths","12","Window for rate metrics such as unscheduled removals. Since-inception rates improve every month for reasons unrelated to maintenance, because early in a fleet life nothing has reached its first interval yet."

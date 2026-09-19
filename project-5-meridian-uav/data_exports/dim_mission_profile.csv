@@ -1,0 +1,7 @@
+﻿"ProfileCode","ProfileName","TypicalPayloadKg","Description"
+"CARGO","Cargo relay","28.0","Maximum payload, long duration, high continuous rotor loading."
+"COASTAL","Coastal survey","12.0","Low altitude, stable air, long straight legs. The benign end of the envelope."
+"MOUNTAIN","Mountain survey","22.0","High density altitude, thermal turbulence, sustained high power settings."
+"SAR","Search and rescue","18.0","Unpredictable profile, frequent hover, often flown in the conditions others avoid."
+"TRAINING","Training and check ride","8.0","Light payload but an unusually high landing count: circuits and autorotation practice."
+"URBAN","Urban inspection","14.0","Short legs, frequent repositioning, many landings, moderate turbulence from buildings."

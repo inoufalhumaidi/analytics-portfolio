@@ -22,7 +22,7 @@ Every project follows the same standard:
 | 2 | [Vantage Wholesale Supply: Receivables Performance](project-2-vantage-receivables/) | Of the days DSO has risen, how many did we grant through longer terms, how many are customers taking, and how many are our own unapplied cash — and who should collections call first? | Excel · Power Query · SQL | ✅ Complete |
 | 3 | [Lumen Optics Manufacturing: Photonics Spend Scorecard](project-3-lumen-optics-spend/) | Our prices are flat and every variance report is green — so why is material cost per accepted unit rising, and where should sourcing renegotiate first? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
 | 4 | [Talon Robotics: Payload Deployment Delivery](project-4-talon-robotics/) | Is the new payload ready to ship, and what is still open? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
-| 5 | Meridian UAV Services: Predictive Maintenance | Which airframes need maintenance before their next mission? | Python · SQL · Streamlit · public + synthetic data | Planned |
+| 5 | [Meridian UAV Services: Predictive Maintenance](project-5-meridian-uav/) | If we are 99.73% compliant, why do we keep having failures? | Python · SQL Server · Streamlit · Excel | ✅ Complete |
 
 ## Project 1 at a glance
 
@@ -79,3 +79,18 @@ Start with the project [README](project-3-lumen-optics-spend/README.md) for the 
 Three defects in the validation report are worth reading: a function that accepted an as-of parameter and ignored it for one metric, drawing a flat line across twenty months; a UAT harness that dropped its own results table on rollback and so reported `Invalid object name` instead of the failures, reachable only when a test failed; and a fixture that silently stopped testing anything after the generator was tuned. See [`docs/data_validation_report.md`](project-4-talon-robotics/docs/data_validation_report.md).
 
 Start with the project [README](project-4-talon-robotics/README.md) for the reproduction steps.
+
+
+## Project 5 at a glance
+
+- **Two correct numbers in the wrong unit.** The fleet is **99.73% compliant** measured in flight hours and **68.41%** measured in stress-weighted duty cycles — the same components, the same intervals, the same day. **89 flight-critical components are past due and read as compliant on every report the operator runs.** MU-008 is at 93.16% of its flight-hour interval and **205.46%** of its stress interval.
+- **An hour is not a unit of wear, and the data says so.** Highland accrues **2.15 stress hours per logged flight hour**; Coastal accrues **1.17**. The hour meter cannot tell them apart. The sting is the training base: lightest payloads, fewest hours, and the *worst* stress compliance in the fleet — circuit training produces landings rather than airborne time.
+- **The finding is not planted.** Each component is given a Weibull life in stress hours and comes off by whichever clock finishes first: flight hours reaching the published interval, or stress reaching its drawn life. On a coastal airframe the clocks run together; on a mountain airframe the physics clock runs 2.4× faster. Nothing says "make Highland worse."
+- **A failure alarm that passes both its targets and prevents almost nothing.** Precision **81.56%** (target 75), recall **98.26%** (target 80) — and **only 37.81% actionable lead time**. Of 283 correctly predicted failures, **176 arrived too late to order the part**. Precision and recall cannot distinguish a warning of 30 hours from one of 6.
+- **The cause is one threshold across two different physics, and the fix is a number.** At the deployed setting the motor-controller alarm is **97.17% precise and 8.74% actionable**. Retuning that component alone to 2.05× gives **93.20% actionable at 75.18% precision — 87 more failures caught in time, for nothing.** Fleet-wide: 37.81% → **66.43%**.
+- **The warning was tested for, not assumed away.** A model over the *same telemetry* reaches 91.11% actionable, so the information exists and the fixed threshold discards it. A model over *exposure only* never reaches the precision floor at any threshold — so the stress model is **not** a substitute for condition monitoring, and the two findings are about genuinely different things.
+- **An optimisation with a test that makes it safe.** A 57-threshold sweep took over ten minutes recomputing window functions; `dbo.AlertFrontier` keeps only the points where a component's running-maximum vibration increases — 22,006 rows instead of 84,000 — and the sweep now takes **1.2 seconds**. UAT-35 recomputes the alert set the slow way and requires a match install-for-install, because a fast answer that disagrees with the slow one is worse than the slow one.
+
+An adversarial multi-agent review of the SQL raised 51 findings — and **49 of its 55 verification agents died on a session quota**, so the run reported 50 as "refuted" when they had simply never been checked. *Unverified is not refuted.* Re-verified by hand, ten were real, including a population filtered on a today-attribute that froze an eighteen-month trend's denominator at 28, component windows that charged **1,144 sorties to two components at once**, and a feature view with no window predicate that fed **362 orphan readings** to the model. One review finding turned out to be my own misreading, and that is recorded too. See [`docs/data_validation_report.md`](project-5-meridian-uav/docs/data_validation_report.md).
+
+Start with the project [README](project-5-meridian-uav/README.md) for the reproduction steps.

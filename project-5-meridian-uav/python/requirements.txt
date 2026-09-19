@@ -1,0 +1,20 @@
+# Project 5 -- Meridian UAV Services: predictive maintenance
+#
+# Versions are FLOORS, not pins. The analysis uses no API that has moved in
+# these libraries for several major versions, and pinning exact builds in a
+# portfolio repository ages it badly -- a reader on a current Python finds a
+# lockfile that will not resolve and concludes the project does not run.
+#
+# Built and verified against: pandas 3.0.6, scikit-learn 1.9.1, numpy 2.5.3,
+# matplotlib 3.11, streamlit 1.64.0, pyodbc 5.3.0, Python 3.12.10.
+
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.4
+matplotlib>=3.8
+streamlit>=1.30
+
+# pyodbc is OPTIONAL. Without it, and without SQL Server, everything still runs
+# from the CSV extracts in data_exports/ -- data_access.py falls back and says
+# so rather than failing or, worse, silently reading something else.
+pyodbc>=5.0

@@ -17,3 +17,16 @@ Thumbs.db
 
 # Editor
 .vscode/
+
+# Python caches and virtualenvs (Project 5)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.streamlit/secrets.toml
+
+# Per-reading model scores: ~1.9 MB, regenerated in seconds by
+# python/degradation_model.py, and of no use to a reader of the repository.
+# The metrics, the threshold sweeps and the three figures ARE committed --
+# those are the deliverable; this is an intermediate.
+project-5-meridian-uav/python/outputs/model_test_scores.csv

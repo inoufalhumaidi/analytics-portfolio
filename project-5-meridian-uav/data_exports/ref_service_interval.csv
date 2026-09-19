@@ -1,0 +1,7 @@
+﻿"ComponentCode","IntervalFlightHours","IntervalStressHours","WeibullShape","IntervalNote"
+"AIRDATA","400.0","400.0","1.05","Effectively random failure. Shape 1.05 means scheduled replacement buys almost nothing -- replacing it early replaces a good part with an equally failure-prone new one."
+"BATT-PACK","120.0","120.0","1.80","Capacity fade. Deep discharge on high-payload profiles accelerates it well beyond what the hour meter suggests."
+"GIMBAL","300.0","300.0","1.40","Servo and slip-ring wear. Nearly flat hazard: close to random failure, so condition monitoring earns less here than elsewhere."
+"LANDGEAR","250.0","250.0","3.10","Fatigue driven almost entirely by landing count rather than airborne time. The clearest case in the fleet for measuring cycles instead of hours."
+"MOTOR-ESC","200.0","200.0","2.10","Winding insulation and bearing degradation. Thermal cycling matters as much as running hours; the stress model has no temperature term, so cycling enters only through the per-landing cycle penalty and this interval is correspondingly approximate."
+"ROTOR-ASSY","150.0","150.0","2.60","Bearing wear-out. Shape 2.6 means the failure rate rises steeply with accumulated stress -- the mean is a poor guide and the interval must be set on the distribution, not the average."
