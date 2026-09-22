@@ -67,7 +67,7 @@ because both came from the same flawed written definition.
 
 ## 3. The model
 
-Eleven tables. Four dimensions (`Dim_Date`, `Dim_Subsystem`, `Dim_Person`, `Dim_Build`), five facts
+Twelve tables. Four dimensions (`Dim_Date`, `Dim_Subsystem`, `Dim_Person`, `Dim_Build`), five facts
 loaded from SQL views (`Requirement`, `Queue`, `RAID`, `WorkItem`, `BuildChurn`), and two reference
 tables plus `Ref_Reporting`.
 

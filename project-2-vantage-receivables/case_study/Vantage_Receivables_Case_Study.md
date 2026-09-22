@@ -167,7 +167,7 @@ This is the pattern worth taking away from the whole engagement.
 
 | Metric | Portfolio | Status | The cohort underneath |
 |---|---:|:---:|---|
-| Promise kept rate | 86.29% | **Green** | High-risk tier: **53.87%** by value, 40.29% by count |
+| Promise kept rate | 86.60% | **Green** | High-risk tier: **54.57%** by value, 40.29% by count |
 | Billing lag | 1.78 d | **Green** | Southeast DC: **3.22 d**, drifting 1.56 → 4.78 through 2025 |
 | Credit utilisation | 17.70% | **Green** | One account over limit at **106%**; three above the 80% target |
 
@@ -204,7 +204,7 @@ The data-quality gate **fails**, and deliberately is not suppressed:
 | Duplicate cash receipts | 96 | $371,039.99 |
 | Over-applied invoices (their effect) | 101 | $371,039.99 |
 | Unapplied cash older than 90 days | 65 | $265,487.11 |
-| Receipts dated before their invoice | 30 | $100,496.95 |
+| Receipts dated before their invoice | 27 | $100,496.95 |
 | Invoices issued before despatch | 20 | $76,841.74 |
 | Due date inconsistent with terms | 52 | $12,727.40 |
 
@@ -257,7 +257,7 @@ Four design decisions are worth naming:
 Collections gets a call list. Cash application gets its own, ranked oldest-first:
 
 > **97 accounts hold $419,392 of unmatched cash. 57 receipts have no application against them at
-> all. The oldest has been sitting for 679 days. $409,640 of past-due balance would be wrongly
+> all. The oldest of those has been sitting for 668 days; the oldest receipt with any unapplied remainder at all goes back 679. $409,640 of past-due balance would be wrongly
 > chased if nobody applies it first.**
 
 This is the cheapest money in the entire analysis: no negotiation, no concession, no relationship
@@ -269,11 +269,11 @@ cost. It is already in the bank.
 
 | # | Recommendation | Owner | Basis | Value |
 |---|---|---|---|---|
-| **1** | **Apply the cash before making a single call** | Cash application | 97 accounts hold $419,392 unmatched; 57 receipts wholly unapplied; oldest 679 days | **2.38 days of DSO** and **$409,640** of wrongly-chaseable balance, at no customer cost |
+| **1** | **Apply the cash before making a single call** | Cash application | 97 accounts hold $419,392 unmatched; 57 receipts wholly unapplied; oldest wholly-unapplied 668 days; oldest with any remainder 679 | **2.38 days of DSO** and **$409,640** of wrongly-chaseable balance, at no customer cost |
 | **2** | **Fix duplicate receipt posting** | Controller | 96 duplicate bankings mis-state AR by 3.421% | **$371,040** of AR correctly stated |
 | **3** | **Reset the DSO target to terms + allowance**, about **55 days** | CFO | Target 45 sits 1.68 days below the 46.68-day terms floor | Restores a scorecard the team can act on |
 | **4** | **Work the bounded queue**, starting with the 19 escalations | Collections manager | 65 accounts carry 81.3% of collectable exposure | Focuses 6 collectors on **$640,540** of the $788,318 at stake |
-| **5** | **Report promise kept-rate by risk tier, never as a portfolio figure** | Collections manager | 86.29% overall conceals 53.87% in the High tier, 244 broken promises worth $625,642 | Turns a Green light into an early-warning system |
+| **5** | **Report promise kept-rate by risk tier, never as a portfolio figure** | Collections manager | 86.60% overall conceals 54.57% in the High tier, 244 broken promises worth $625,642 | Turns a Green light into an early-warning system |
 | **6** | **Investigate Southeast invoice posting** | Operations | 3.22 days against a 1.50 baseline elsewhere, drifting all year | **$50,477** of cash, recoverable by changing a batch schedule |
 | **7** | **Price and cap the extended-terms programme** at the Q1 review | Sales director | Shift-share isolates a deliberate +1.71-day rate effect across the same 400 customers | Makes ~$301k of working capital a priced decision rather than a drift |
 | **8** | **Measure collections on CEI (cash), not CEI (book)** | CFO | $702,389 of write-offs currently score as collections | Removes an incentive to improve the metric by giving up |
@@ -407,12 +407,12 @@ dataset byte for byte, and UAT-16 asserts the fingerprints.
 | 90+ share of AR | 3.35% | 3.00 | 6.00 | Amber |
 | **Unapplied cash % of AR** | **3.87%** | 0.50 | 1.50 | **Red** |
 | Billing lag (days) | 1.78 d | 2.00 | 4.00 | Green* |
-| Promise kept rate | 86.29% | 80.00 | 65.00 | Green* |
+| Promise kept rate | 86.60% | 80.00 | 65.00 | Green* |
 | Credit utilisation (portfolio) | 17.70% | 80.00 | 100.00 | Green* |
 | Mean open dispute age | 28.13 d | 15.00 | 30.00 | Amber |
 
 \* Green at portfolio level only. Southeast billing lag is 3.22 days; the High-risk promise kept
-rate is 53.87%; three accounts are over their credit limit, one at 106%. See §3.4.
+rate is 54.57%; one account (C0297) is over its credit limit at 106.10%; three are above the 80% target, one at 106%. See §3.4.
 
 | Ageing bucket | Invoices | Balance | Share |
 |---|---:|---:|---:|

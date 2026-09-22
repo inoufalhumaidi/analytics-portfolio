@@ -237,10 +237,16 @@ result set, which is the single outcome it was written to catch. The zero guard
 inverted the test it was guarding.
 */
 DECLARE @fitPrior INT = (SELECT COUNT(*) FROM dbo.fn_ComponentWear(@Prior) WHERE IsInFleetAsOf = 1);
+-- The VALUE, not just 'differs and is non-empty'. 401 is knowable: 31 airframes
+-- were in the fleet in June 2025 against 28 today. Asserting only '<> 364'
+-- would pass for any wrong answer that happens not to equal today's -- and the
+-- first attempt at pinning this asserted 362, a figure read from a run before
+-- the as-of population fix, which is exactly why the value has to come from
+-- the database rather than from a previous transcript.
 INSERT INTO #UATResults VALUES ('UAT-09', 'fn_ComponentWear responds to @AsOfDate',
-    '>0 and <> today', CAST(@fitPrior AS VARCHAR(20)),
-    CASE WHEN @fitPrior > 0 AND @fitPrior <> 364 THEN 1 ELSE 0 END,
-    'A different set of components was fitted in June 2025 -- and the function must return some.');
+    '401', CAST(@fitPrior AS VARCHAR(20)),
+    CASE WHEN @fitPrior = 401 THEN 1 ELSE 0 END,
+    'A different set of components was fitted in June 2025: 401 across 31 airframes, against 364 across 28 today.');
 
 /*
 UAT-10: EVERY metric must move between two dates, not just the headline one.
@@ -566,9 +572,12 @@ Filtering on AirframeStatus excluded all three from every historical figure.
 */
 DECLARE @fleetMid INT = (SELECT COUNT(*) FROM dbo.fn_AirframeStress(@Mid) WHERE IsInFleetAsOf = 1);
 DECLARE @fleetNow INT = (SELECT COUNT(*) FROM dbo.fn_AirframeStress(@AsOf3) WHERE IsInFleetAsOf = 1);
+-- Both values pinned. 'mid > now' is the shape of the claim, but the shape
+-- holds for any pair that happens to be ordered -- including a population
+-- filtered the old way that returned 31 and 30 by accident.
 INSERT INTO #UATResults VALUES ('UAT-29', 'Fleet size is computed from dates, so it differs between two as-of dates',
-    'mid > now', CONCAT(@fleetMid, ' > ', @fleetNow),
-    CASE WHEN @fleetMid > @fleetNow AND @fleetNow > 0 THEN 1 ELSE 0 END,
+    '31 then 28', CONCAT(@fleetMid, ' > ', @fleetNow),
+    CASE WHEN @fleetMid = 31 AND @fleetNow = 28 THEN 1 ELSE 0 END,
     'Three airframes retired inside the window. A population filtered on AirframeStatus would return the same number at both dates.');
 
 /*
@@ -668,8 +677,9 @@ INSERT INTO #UATResults VALUES ('UAT-34', 'Every target in Ref_FleetTargets is e
 /*
 UAT-35: the fast path must agree with the slow path it replaced.
 
-dbo.AlertFrontier collapses 84,000 readings to 22,000 frontier points and takes
-a 57-threshold sweep from ten minutes to just over a second. It rests on one
+dbo.AlertFrontier collapses the 73,900 readings past the baseline window to
+22,006 frontier points and takes a 57-threshold sweep from ten minutes to just
+over a second. It rests on one
 claim: 'the first reading at or above T' is the same row as 'the first reading
 whose running maximum is at or above T'.
 

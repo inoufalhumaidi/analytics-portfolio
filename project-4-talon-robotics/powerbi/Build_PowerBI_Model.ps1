@@ -286,7 +286,11 @@ SELECT AsOfBuild, AsOfDate FROM dbo.vw_ReadinessKPI
 $model.Tables.Add($tRep) | Out-Null
 
 $model.SaveChanges() | Out-Null
-Write-Host "  11 tables created"
+# Counted, not asserted. This read "11 tables created" while the script added
+# twelve -- Ref_Reporting arrived last and the literal above it never moved. A
+# hardcoded count of a thing the code builds is a claim that rots silently,
+# and the measure count forty lines below already does this correctly.
+Write-Host "  $($model.Tables.Count) tables created"
 
 # -----------------------------------------------------------------------------
 # 4. Refresh

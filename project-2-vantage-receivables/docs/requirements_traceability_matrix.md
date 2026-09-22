@@ -32,7 +32,7 @@ reviewer can check the claim rather than take it.
 | **BR-06** | State whether the DSO target is achievable given the terms actually sold | CFO | M | `fn_DSOBridge.WeightedAvgTermsDays`; Dashboard `H16` | Workbook validation | Target **45.00** vs WAT **46.68** → allowance **−1.68 days** |
 | **BR-07** | Measure collections performance without rewarding write-offs | Collections | M | `fn_ARKPI` — `CEI_Book`, `CEI_Cash`, `PaperCollectionsGap` | UAT-13 | CEI book **66.91%**, cash **65.26%**, gap **1.65 pts** |
 | **BR-08** | Produce a ranked worklist answering "who do we call first" | Collections | M | `fn_PriorityActionQueue(@AsOf)` | UAT-08, 09, 10 | **272** accounts ranked; **65** on today's worklist |
-| **BR-09** | Bound the worklist to what six collectors can work in a day | Collections | M | `IsTodaysWorklist`, `CollectorRank`, `CallsPerCollectorPerDay` | UAT-10 | 10–12 per collector, **81.3%** of collectable exposure |
+| **BR-09** | Bound the worklist to what six collectors can work in a day | Collections | M | `IsTodaysWorklist`, `CollectorRank`, `CallsPerCollectorPerDay` | UAT-10 | 10–13 per collector, **81.3%** of collectable exposure |
 | **BR-10** | Tell each collector what to do, not just who to ring | Collections | M | `ActionCode` + `RecommendedAction` ladder | UAT-09 | 7 action types; every row carries an instruction |
 | **BR-11** | Route disputed balances away from collections | Collections | S | Dispute discount in `CollectableExposure`; `RESOLVE_DISPUTE` | UAT-08 | **45** accounts / $195,694 routed to billing |
 | **BR-12** | Flag accounts at or over credit limit without hijacking the collections action | Credit manager | S | `CreditHoldFlag` as a separate bit | UAT-09 | 3 accounts flagged; highest utilisation **106.10%** |
@@ -45,9 +45,9 @@ reviewer can check the claim rather than take it.
 | **BR-19** | Provide a reusable query interface for any consumer | Data team | S | 8 stored procedures, `@AsOf`-parameterised, no dynamic SQL | UAT-14 | All 8 execute; invalid arguments raise |
 | **BR-20** | Exclude the ledger ramp-up from trend conclusions | Controller | S | `IsComparablePeriod` on the monthly views | §8 validation report | 4 months excluded, **19** comparable |
 | **BR-21** | Show days-beyond-terms without survivorship bias | Collections | C | `fn_DBT(@AsOf, @Months)` — settled and at-risk variants | UAT-25 | Settled **10.56 d** vs at-risk **12.41 d**; survivorship gap widened from **0.62 d** (2024) to **1.85 d** (2025) |
-| **BR-22** | **Track unapplied cash sitting against paid accounts** | **Cash application** | **M** | **`Fact_CashReceipt` + `Fact_CashApplication`; `fn_UnappliedCash(@AsOf)`; `usp_CashApplicationWorklist`; `APPLY_CASH` routing** | **UAT-18, 19, 20, 24** | **$419,392.13 across 97 accounts; 57 receipts wholly unapplied; oldest 679 days; 51 accounts routed out of the call list** |
+| **BR-22** | **Track unapplied cash sitting against paid accounts** | **Cash application** | **M** | **`Fact_CashReceipt` + `Fact_CashApplication`; `fn_UnappliedCash(@AsOf)`; `usp_CashApplicationWorklist`; `APPLY_CASH` routing** | **UAT-18, 19, 20, 24** | **$419,392.13 across 97 accounts; 57 receipts wholly unapplied; oldest wholly-unapplied 668 days; oldest with any remainder 679; 51 accounts routed out of the call list** |
 | **BR-23** | **Measure billing lag from despatch to invoice** | **Operations** | **S** | **`Fact_Invoice.ShipDateKey`; `fn_BillingLag`; `vw_BillingLagMonthly`; `usp_BillingLagReport`; `CashCycleDays`** | **UAT-21** | **1.78 days overall; Southeast 3.22 vs 1.49–1.51 elsewhere; true cash cycle 63.37 days** |
-| **BR-24** | **Report promise-to-pay kept rate** | **Collections** | **S** | **`Fact_PromiseToPay`; `fn_PromiseStatus`; `fn_PromiseKeptRate`; `usp_PromiseReport`; broken-promise escalation in the queue** | **UAT-22, 23** | **86.29% by value overall; High-risk tier 53.87%; 244 broken promises worth $625,642** |
+| **BR-24** | **Report promise-to-pay kept rate** | **Collections** | **S** | **`Fact_PromiseToPay`; `fn_PromiseStatus`; `fn_PromiseKeptRate`; `usp_PromiseReport`; broken-promise escalation in the queue** | **UAT-22, 23** | **86.60% by value overall; High-risk tier 54.57%; 244 broken promises worth $625,642** |
 
 ---
 
@@ -60,7 +60,7 @@ metrics — one of them changed a headline conclusion.
 |---|---|---|
 | **BR-22** | Unapplied cash as a first-class category | **2.38 days of DSO moved out of "customers are paying late" and into "we have not applied our own cash".** The granted-versus-taken framing the project was built to answer turned out to need a third term. |
 | **BR-23** | Billing lag, and the true cash cycle | DSO was understating the order-to-cash cycle by 1.78 days. Lag extends DSO rather than decomposing it, so the bridge identity is preserved (UAT-21). |
-| **BR-24** | Promise kept rate, derived from cash | Surfaced the cohort pattern: a portfolio figure of 86.29% sitting on top of a High-risk tier at 53.87%. Also became an escalation trigger in the queue. |
+| **BR-24** | Promise kept rate, derived from cash | Surfaced the cohort pattern: a portfolio figure of 86.60% sitting on top of a High-risk tier at 54.57%. Also became an escalation trigger in the queue. |
 
 ### Schema changes required
 
@@ -80,7 +80,7 @@ metrics — one of them changed a headline conclusion.
 |---|---|---|---|---|---|
 | **DQ-01** | No receipt banked twice for the same customer, date and amount | `DUPLICATE_RECEIPT` | Receipt | High | **96 found** (planted; retained to prove the detector fires) |
 | **DQ-02** | No invoice may carry applied cash exceeding its value | `OVER_APPLIED_CASH` | Invoice | High | **101 found** — traced entirely to DQ-01 |
-| **DQ-03** | No receipt may be dated before the invoice it settles | `RECEIPT_BEFORE_INVOICE` | Receipt | High | **30 found** ($100,496.95) |
+| **DQ-03** | No receipt may be dated before the invoice it settles | `RECEIPT_BEFORE_INVOICE` | Receipt | High | **27 found** ($100,496.95) |
 | **DQ-04** | Every fact row must resolve to a dimension row | `ORPHAN_DIMENSION_KEY` | Invoice | High | 0 |
 | **DQ-05** | Adjustments may not exceed what is owed | `ADJUSTMENT_EXCEEDS_INVOICE` | Invoice | High | 0 *(5 found and fixed during the build)* |
 | **DQ-06** | Due date must equal invoice date plus the terms net days | `DUE_DATE_TERMS_MISMATCH` | Invoice | Medium | **52 found** ($12,727.40) |

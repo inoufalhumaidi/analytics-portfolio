@@ -263,6 +263,12 @@ IF @missing <> '' THROW 52020, 'FAILED to create core objects -- scroll up for t
 
 -- Sanity: every baselined requirement appears exactly once, and the four
 -- verification states partition the population with nothing left over.
+--
+-- FIVE, not four -- 'No evidence', 'Insufficient evidence', 'Stale -
+-- requirement changed', 'Stale - subsystem changed', 'Current'. And note what
+-- the gate below actually does: it compares two ROW COUNTS. It never looks at
+-- VerificationState, so it would pass unchanged if the CASE fell through to
+-- NULL for an entire state. UAT-01 is what asserts the partition.
 DECLARE @reqs INT = (SELECT COUNT(*) FROM dbo.Dim_Requirement WHERE ReqStatus = 'Baselined');
 DECLARE @rows INT = (SELECT COUNT(*) FROM dbo.vw_RequirementVerification);
 IF @reqs <> @rows

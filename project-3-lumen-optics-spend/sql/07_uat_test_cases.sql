@@ -87,9 +87,12 @@ DECLARE @coveredByOpen INT = (
                   WHERE pa.AgreementNo = c.AgreementNo AND pa.ValidToDateKey IS NULL));
 INSERT INTO #UATResults VALUES ('UAT-03','Contract resolution',
  'Lines are matched to open-ended agreements, not dropped as uncovered',
- '> 0 lines matched to one of ' + CAST(@openEnded AS VARCHAR(10)) + ' open agreements',
- CAST(@coveredByOpen AS VARCHAR(20)) + ' lines',
- CASE WHEN @openEnded > 0 AND @coveredByOpen > 0 THEN 'PASS' ELSE 'FAIL' END,
+ -- Asserts the VALUES, not merely that both are non-zero. '> 0' holds under
+ -- any implementation that matches even one line, including one that dropped
+ -- most of them; 187 open agreements covering 1,333 lines is the claim.
+ '187 open agreements, 1333 lines covered',
+ CAST(@openEnded AS VARCHAR(10)) + ' agreements, ' + CAST(@coveredByOpen AS VARCHAR(20)) + ' lines',
+ CASE WHEN @openEnded = 187 AND @coveredByOpen = 1333 THEN 'PASS' ELSE 'FAIL' END,
  'An open ValidTo means the contract has no end date, not that it never applied. Treating NULL as "not in force" would report perfectly governed spend as maverick.');
 
 /* ---------------------------------------------------------------------------
@@ -196,6 +199,22 @@ UAT-11  The negotiation is assigned to the buyer who actually places the spend.
         Caught during the build: ownership was assigned with MIN(BuyerKey), and
         140 of 185 pairs are touched by more than one buyer -- so for three
         quarters of the queue the assignment was an accident of key ordering.
+
+        AND THEN THIS TEST AGREED WITH A SECOND DEFECT FOR THE SAME REASON.
+        fn_RenegotiationQueue scopes its Quality CTE with
+        `PONumber NOT LIKE 'PO-D%'`, but the correlated PrimaryBuyer subquery
+        inside it opened fn_POLineCost again and applied only the date filter --
+        so every other column on the row was computed on de-duplicated spend
+        while the buyer was chosen on spend inflated by duplicated requisitions.
+        On LOM-0043 / VEN-029 that flipped ownership from BUY-04 to BUY-03.
+
+        The recomputation below omitted the exclusion too, so it reproduced the
+        implementation instead of checking it, and passed. Both sides had been
+        written from the same incomplete reading of the definition -- the same
+        shape as Project 1's Excel and SQL agreeing exactly while both were
+        wrong. The definition is "the buyer who placed the most spend on that
+        pair", and the queue's own spend figures exclude duplicated
+        requisitions, so the buyer must be chosen on that same population.
 --------------------------------------------------------------------------- */
 DECLARE @wrongBuyer INT = (
     SELECT COUNT(*) FROM dbo.fn_RenegotiationQueue('2025-12-31', 8) q
@@ -206,6 +225,7 @@ DECLARE @wrongBuyer INT = (
         JOIN dbo.Dim_Part  p ON p.PartKey  = c.PartKey
         JOIN dbo.Dim_Vendor v ON v.VendorKey = c.VendorKey
         WHERE p.PartNumber = q.PartNumber AND v.VendorID = q.VendorID
+          AND c.PONumber NOT LIKE 'PO-D%'
           AND c.OrderDate > DATEADD(MONTH, -12, '2025-12-31')
         GROUP BY b.BuyerID, b.BuyerKey
         ORDER BY SUM(c.ExtendedPrice) DESC, b.BuyerKey));
@@ -222,7 +242,7 @@ UAT-12  The cost index equals the like-for-like index, recomputed at PAIR grain.
         true under ANY positive weighting of the pairs, so it passed happily
         while fn_VendorScorecard was summing each pair's landed cost once per
         PO line -- a join fan-out that turned the index into a line-count-
-        weighted average of itself and moved 33 of 40 vendors' rank positions.
+        weighted average of itself and moved 33 of 36 vendors' rank positions.
         A test that cannot fail for the reason it was written is not a test.
         This version recomputes the index at the grain the definition is stated
         in, which is the grain the implementation got wrong.
@@ -314,9 +334,14 @@ DECLARE @ambig INT = (SELECT Anomalies FROM dbo.vw_DQ_Summary WHERE AnomalyType 
 DECLARE @overlaps INT = (SELECT COUNT(*) FROM dbo.Fact_PriceAgreement WHERE AgreementNo LIKE 'PA-X%');
 INSERT INTO #UATResults VALUES ('UAT-17','Data quality',
  'Overlapping agreements are detected as ambiguous contracted prices',
- '> 0 lines from ' + CAST(@overlaps AS VARCHAR(10)) + ' overlapping agreements',
- CAST(@ambig AS VARCHAR(20)) + ' lines',
- CASE WHEN @overlaps > 0 AND @ambig > 0 THEN 'PASS' ELSE 'FAIL' END,
+ -- 61 is the figure the validation report and the case study both publish,
+ -- and nothing asserted it: '> 0' would pass if the check found one line of
+ -- the sixty-one. The planted overlap count is pinned too, so a generator
+ -- change that stops planting them fails here rather than silently reporting
+ -- a clean dataset.
+ '6 overlapping agreements, 61 ambiguous lines',
+ CAST(@overlaps AS VARCHAR(10)) + ' agreements, ' + CAST(@ambig AS VARCHAR(20)) + ' lines',
+ CASE WHEN @overlaps = 6 AND @ambig = 61 THEN 'PASS' ELSE 'FAIL' END,
  'When two agreements cover the same date, the contracted price -- and therefore the price variance on that line -- depends on which row the query reaches first. Reporting the variance without reporting the ambiguity is a number with no error bar.');
 
 /* ---------------------------------------------------------------------------

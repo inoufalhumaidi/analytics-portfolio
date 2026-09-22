@@ -4,7 +4,10 @@ $Path = Join-Path $PSScriptRoot "Ridgeline_KPI_Dashboard.xlsx"
 $excel = New-Object -ComObject Excel.Application
 $excel.Visible = $false
 $excel.DisplayAlerts = $false
-$wb = $excel.Workbooks.Open($Path)
+# Read-only: opening read-write lets Excel rewrite the file's timestamp and
+# calculation chain just by looking at it, so a validation run that changed
+# nothing still shows the artefact as modified. Projects 2-4 already do this.
+$wb = $excel.Workbooks.Open($Path, 0, $true)   # 3rd arg = ReadOnly
 $excel.CalculateFullRebuild()
 $excel.CalculateUntilAsyncQueriesDone()
 

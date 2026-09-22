@@ -54,8 +54,19 @@ GO
 -- =============================================================================
 -- usp_GetPriorityActionQueue
 -- Top-N technicians needing dispatch review for a given month, ranked by
--- RiskScore. This is the exact query the Excel Priority_Action_Queue sheet
--- and the live dashboard's "This Week's Actions" panel both call.
+-- RiskScore.
+--
+-- This is the SQL-side interface. It is deliberately NOT what the other two
+-- artefacts call, and an earlier version of this comment said it was:
+--   * the Excel Priority_Action_Queue sheet re-implements the ranking in
+--     worksheet formulas (SUMIFS/AVERAGEIFS over tblJobs), and that
+--     independence is the point -- it is what makes the Excel-versus-SQL
+--     reconciliation evidence of anything at all;
+--   * the dashboard exporter reads dbo.vw_PriorityActionQueue directly,
+--     because it needs OvertimePctOfCapacity, which this procedure does not
+--     return.
+-- Claiming one calling contract where there are three is how a reader comes to
+-- believe a change here propagates everywhere. It does not.
 -- =============================================================================
 IF OBJECT_ID('dbo.usp_GetPriorityActionQueue', 'P') IS NOT NULL DROP PROCEDURE dbo.usp_GetPriorityActionQueue;
 GO
@@ -98,6 +109,23 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM dbo.Dim_Technician WHERE TechnicianID = @TechnicianID)
     BEGIN
         RAISERROR('TechnicianID %s not found in Dim_Technician.', 16, 1, @TechnicianID);
+        RETURN;
+    END
+
+    -- An INACTIVE technician exists, so the guard above lets it through -- and
+    -- then vw_TechnicianKPIMonthly returns nothing, because the capacity view
+    -- beneath it filters EmploymentStatus = 'Active'. The caller gets an empty
+    -- grid and exit code 0.
+    --
+    -- That is the failure mode this file already warns about on
+    -- usp_GetRegionKPISummary: an empty grid reads as "this technician had no
+    -- jobs", when it actually means "this technician is not in the capacity
+    -- model at all". The two look identical to the caller and only one of them
+    -- is safe to act on.
+    IF EXISTS (SELECT 1 FROM dbo.Dim_Technician
+               WHERE TechnicianID = @TechnicianID AND EmploymentStatus <> 'Active')
+    BEGIN
+        RAISERROR('TechnicianID %s is not Active. The capacity model covers active technicians only, so this scorecard would be empty -- which reads as "no jobs" rather than "not modelled".', 16, 1, @TechnicianID);
         RETURN;
     END
 

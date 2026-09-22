@@ -269,7 +269,7 @@ GO
  THE PROBLEM
 
  Evaluating an alarm at one threshold takes about 1.7 seconds: vw_SensorFeatures
- computes rolling windows and per-component baselines over 84,000 readings.
+ computes rolling windows and per-component baselines over 83,520 readings.
  That is fine once. A threshold SWEEP asks the same question fifty-seven times,
  and the view is recomputed for every one -- the extract build spent over ten
  minutes on a question that has a single answer.
@@ -282,8 +282,10 @@ GO
  increases -- its frontier. Everything between two increases can never be a
  first crossing for any threshold.
 
- That collapses 84,000 readings to roughly a tenth as many frontier points, and
- turns each threshold from a full scan into an index seek.
+ That collapses the 73,900 readings past the baseline window to 22,006 frontier
+ points -- under a third as many -- and, more importantly, turns each threshold
+ from a full scan with window functions into an index seek. The row reduction is
+ the smaller half of the win; not recomputing the windows is the larger.
 
  WHY A TABLE AND NOT A VIEW
 

@@ -339,6 +339,23 @@ AS RETURN
         DaysSincePromised = DATEDIFF(DAY, dp.[Date], @AsOf),
         PromiseStatus = CASE
             WHEN dp.[Date] > @AsOf                                            THEN 'Outstanding'
+            /*
+            A promise whose GRACE PERIOD has not expired is still Outstanding.
+
+            The cash-matching window above is correctly truncated at @AsOf --
+            that is the as-of discipline. But the effect was that a promise due
+            within @GraceDays of the reporting date had its window silently
+            shortened, found less cash than it should have, and fell through to
+            'Broken'. The header of this function promises the opposite: "A
+            promise whose date has not yet arrived is Outstanding, not Broken.
+            Counting unripe promises as failures would make the rate depend on
+            when you asked."
+            It did. 7 of 1,347 promises at the published reporting date.
+            UAT-23 tested only PromisedPayDate > @AsOf, which is the one case
+            the ladder already handled.
+            */
+            WHEN DATEADD(DAY, @GraceDays, dp.[Date]) > @AsOf
+             AND 100.0 * x.Paid / NULLIF(p.PromisedAmount,0) < @KeptThresholdPct THEN 'Outstanding'
             WHEN 100.0 * x.Paid / NULLIF(p.PromisedAmount,0) >= @KeptThresholdPct THEN 'Kept'
             WHEN 100.0 * x.Paid / NULLIF(p.PromisedAmount,0) >= 25.0          THEN 'PartiallyKept'
             ELSE 'Broken' END,
@@ -394,10 +411,24 @@ AS RETURN
         PartialCount    = SUM(CASE WHEN PromiseStatus = 'PartiallyKept' THEN 1 ELSE 0 END),
         BrokenCount     = SUM(CASE WHEN PromiseStatus = 'Broken' THEN 1 ELSE 0 END),
         BrokenDollars   = CAST(ISNULL(SUM(CASE WHEN PromiseStatus = 'Broken' THEN PromisedAmount ELSE 0 END), 0) AS DECIMAL(14,2)),
+        /*
+        OUTSTANDING PROMISES ARE NOT IN THE DENOMINATOR.
+
+        A kept rate is over promises whose outcome is KNOWN. An outstanding
+        promise has not failed -- it has not finished -- and dividing by it
+        counts "we do not know yet" as "they did not pay". That is the same
+        error the CASE ladder above was fixed for, one level up.
+
+        This divided by SUM(PromisedAmount) over everything, and agreed with
+        the Excel workbook only because there were no outstanding promises at
+        the reporting date to disagree about. The moment the grace-window fix
+        produced five, the two implementations returned 86.29 and 86.60 and the
+        workbook validator stopped the build -- which is what it is for.
+        */
         KeptRatePct     = CAST(100.0 * SUM(CASE WHEN PromiseStatus = 'Kept' THEN PromisedAmount ELSE 0 END)
-                             / NULLIF(SUM(PromisedAmount), 0) AS DECIMAL(6,2)),
+                             / NULLIF(SUM(CASE WHEN PromiseStatus <> 'Outstanding' THEN PromisedAmount ELSE 0 END), 0) AS DECIMAL(6,2)),
         KeptRateByCountPct = CAST(100.0 * SUM(CASE WHEN PromiseStatus = 'Kept' THEN 1 ELSE 0 END)
-                             / NULLIF(COUNT(*), 0) AS DECIMAL(6,2))
+                             / NULLIF(SUM(CASE WHEN PromiseStatus <> 'Outstanding' THEN 1 ELSE 0 END), 0) AS DECIMAL(6,2))
     FROM S
 );
 GO

@@ -72,7 +72,7 @@ $checks = @(
        Sql="SELECT WorkItemCompletionPct FROM dbo.vw_ReadinessKPI" },
     @{ Sheet='Dashboard'; Cell='B18'; Label='Critical RAID open';     Published=9;     Tol=0.5;
        Sql="SELECT CriticalRAIDOpen FROM dbo.vw_ReadinessKPI" },
-    @{ Sheet='Dashboard'; Cell='B19'; Label='Overdue RAID %';         Published=0;     Tol=0.05;
+    @{ Sheet='Dashboard'; Cell='B19'; Label='Overdue RAID %';         Published=57.78; Tol=0.05;
        Sql="SELECT OverdueRAIDPct FROM dbo.vw_ReadinessKPI" }
 )
 

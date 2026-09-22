@@ -50,7 +50,7 @@ project-4-talon-robotics/
 │   ├── 03_core_views.sql             the verification-currency model
 │   ├── 04_data_quality_checks.sql    11 behavioural checks + a gate that raises
 │   ├── 05_kpi_views.sql              readiness scorecard, RAID exposure, verification queue
-│   ├── 06_stored_procedures.sql      the reusable interface — 7 procedures, all @AsOf-aware
+│   ├── 06_stored_procedures.sql      the reusable interface — 6 procedures, all @AsOf-aware (plus the data-quality gate from 04)
 │   └── 07_uat_test_cases.sql         23 acceptance tests; raises and stops on failure
 ├── erp_extracts/                     12 CSVs (2,199 rows) + the script that writes them
 ├── excel/
@@ -125,7 +125,7 @@ than inside a query nobody reads.
 
 - **110 requirements** pass only below the level their type demands — a safety behaviour signed off
   by a unit test.
-- **20 requirements** have passing evidence produced by their own owner, against a policy requiring
+- **46 requirements** (40 of them must-ship) have passing evidence produced by their own owner, against a policy requiring
   an independent witness.
 
 Both read as a pass on every dashboard the programme currently runs. **Policy compliance: 77.45%.**
@@ -166,7 +166,7 @@ LibreOffice.
 
 ## The Power BI model
 
-`powerbi/Build_PowerBI_Model.ps1` scripts 11 tables, 9 relationships and **53 DAX measures** into a
+`powerbi/Build_PowerBI_Model.ps1` scripts 12 tables, 9 relationships and **53 DAX measures** into a
 running Desktop session through the local Analysis Services engine. `Validate_PowerBI_Model.ps1`
 then queries the model **in DAX** and reconciles **28 of 28** figures against SQL.
 
@@ -223,6 +223,7 @@ sqlcmd -S <server> -E -d master        -i sql/01_create_schema.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/02_generate_synthetic_data.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/03_core_views.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/04_data_quality_checks.sql
+sqlcmd -S <server> -E -d TalonDelivery -Q "EXEC dbo.usp_RunDataQualityChecks"   # the gate
 sqlcmd -S <server> -E -d TalonDelivery -i sql/05_kpi_views.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/06_stored_procedures.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/07_uat_test_cases.sql     # expect 23/23
@@ -235,6 +236,8 @@ powershell excel/Validate_Workbook.ps1                                  # expect
 powershell powerbi/Build_PowerBI_Model.ps1                              # click the credential prompt
 powershell powerbi/Validate_PowerBI_Model.ps1                           # expect 28/28
 ```
+
+**The gate is a separate step.** `04_data_quality_checks.sql` *creates* `usp_RunDataQualityChecks`; it does not run it. Executing the procedure is what applies the tolerance — it passes here at **1.779% against 2.000%**.
 
 The QA gate raises rather than printing, so `sqlcmd -b` stops the sequence when it fails. It passes
 here at 1.779% against a 2.000% tolerance; tighten `@MaxAffectedMustShipPct` to see it stop.

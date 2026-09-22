@@ -2,7 +2,7 @@
 
 Produces `Ridgeline_KPI_Dashboard.pbix`. Power BI Desktop has no CLI, but it does expose its data model (not its report pages) through a local Analysis Services engine while a file is open — the same mechanism Tabular Editor and DAX Studio use. Two ways to build this:
 
-**Option A — scripted (recommended, ~2 minutes for the data model):** run `powerbi/Build_PowerBI_Model.ps1` against an open blank report. It connects to Power BI Desktop's local engine and builds all 7 tables, 6 relationships (5 active), all 28 DAX measures and the Year › MonthName hierarchy by script — Sections 1–4 below, done for you. You still build the report pages by hand in Section 5. The script reaches only the data model, not report layout.
+**Option A — scripted (recommended, ~2 minutes for the data model):** run `powerbi/Build_PowerBI_Model.ps1` against an open blank report. It connects to Power BI Desktop's local engine and builds all 7 tables, 6 relationships (5 active), all 31 DAX measures and the Year › MonthName hierarchy by script — Sections 1–4 below, done for you. You still build the report pages by hand in Section 5. The script reaches only the data model, not report layout.
 
 ```powershell
 # 1. Open Power BI Desktop, File > New (a blank report)
@@ -11,7 +11,7 @@ Produces `Ridgeline_KPI_Dashboard.pbix`. Power BI Desktop has no CLI, but it doe
 powershell -File Build_PowerBI_Model.ps1
 ```
 
-Power BI Desktop will show a credentials/privacy-level dialog the first time it processes the new SQL Server connection — the script will appear to hang until you click through it (choose Windows/Integrated auth, any privacy level). This happens once per Desktop session. Once it finishes, expand `Fact_ServiceJobs` in the Fields pane — the 28 measures are grouped into Volume/Quality/Utilization/Financial/Targets/Status/Formatting folders underneath it, not in a separate table. Save the file (File > Save As) into this folder when done, then skip to Section 5.
+Power BI Desktop will show a credentials/privacy-level dialog the first time it processes the new SQL Server connection — the script will appear to hang until you click through it (choose Windows/Integrated auth, any privacy level). This happens once per Desktop session. Once it finishes, expand `Fact_ServiceJobs` in the Fields pane — the 31 measures are grouped into Volume/Quality/Utilization/Financial/Targets/Status/Formatting folders underneath it, not in a separate table. Save the file (File > Save As) into this folder when done, then skip to Section 5.
 
 **Option B — fully manual (~15–20 minutes):** follow Sections 1–4 below yourself in the Desktop UI, then Section 5 either way.
 

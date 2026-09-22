@@ -137,7 +137,21 @@ corrected view.
 - **Excel** (`KPI_Dashboard` sheet, region/all-region view): available capacity = `NETWORKDAYS()` of the full calendar month × active technician headcount in the filtered scope, not adjusted per-technician for `HireDate`.
 - **Excel** (`Priority_Action_Queue` sheet, per-technician view): *does* adjust for `HireDate` via `NETWORKDAYS(MAX(HireDate, MonthStart), MonthEnd)`, matching the SQL logic exactly at the technician grain.
 
-The aggregate-level simplification introduces at most a ~0.1 percentage point difference (confirmed in Section 3) because very few technicians are hired mid-month in any given period. It is called out here rather than silently reconciled, per this project's data-quality standard: an approximation is acceptable, an undocumented one is not.
+The bound originally stated here — "at most a ~0.1 percentage point difference … because
+very few technicians are hired mid-month" — was wrong about both the size and the cause, and is
+corrected rather than removed.
+
+The dominant error is not mid-month hires. It is technicians hired **after** the month being
+viewed: the Excel region view counts every currently-active technician in the region for every
+month, including ones who had no capacity at all yet, while SQL counts only those already hired.
+Early months therefore carry a large inflated denominator, and the gap is far bigger than a tenth
+of a point in those periods.
+
+The per-technician view on `Priority_Action_Queue` does adjust for `HireDate` and matches SQL
+exactly, so the technician-grain figures — the ones the action queue is built on — are unaffected.
+It is called out here rather than silently reconciled, per this project's data-quality standard:
+an approximation is acceptable, an undocumented one is not, and a *mis-stated* one is worse than
+either.
 
 ## 7. Three defects found in the Power BI semantic model (and how)
 
@@ -157,17 +171,42 @@ The Power BI model is the third independent implementation of the same KPI logic
 |---|---|---|
 | Available Minutes, all regions | 386,400 | 386,400 |
 | Available Minutes by region | 99,360 / 77,280 / 77,280 / 77,280 / 55,200 | identical |
-| Worked Minutes by region | 72,310 / 60,512 / 52,949 / 39,833 / 42,112 | identical |
-| Utilization % by region | 72.78 / 78.30 / 68.52 / 51.54 / 76.29 | identical |
+| Worked Minutes by region | 72,310 / 60,512 / 52,949 / 39,833 / 42,112 | identical **(pre-§5b)** |
+| Utilization % by region | 72.78 / 78.30 / 68.52 / 51.54 / 76.29 | identical **(pre-§5b)** |
 | Total Jobs by region | 557 / 395 / 415 / 309 / 273 | identical |
 | Technicians flagged (Risk > 0) | 25 | 25 |
 | Inactive technicians in the queue | 0 (blank) | 0 (excluded) |
+
+> **These two rows are the PRE-§5b figures and are left as they were recorded.** The worked-minute
+> values are `TotalWorkedMinutes` (weekday **and** weekend), and the percentages are the all-days
+> ratio. They reconciled exactly at the time, because DAX and SQL then shared the same defect —
+> which is precisely what makes this table worth keeping: two implementations agreeing is evidence
+> that they agree, not that they are right. See §8 for the current position.
 
 **The pattern worth noting:** defect #2 is the same *class* of bug as the SQL one in Section 5 — a filter/join that looks right, produces plausible numbers, and is wrong only in a direction nobody checks. Both were caught the same way: by computing the same quantity two ways and insisting the two agree exactly, rather than eyeballing whether the output looked sensible. Neither would have been caught by testing that the report "ran without errors."
 
 ## 8. Report-layer review (pages, visuals, navigation)
 
-A full review of the draft report checked every visual's fields, filters, sort order and formatting against the guide and against SQL. Page 1's numbers reconcile exactly with no slicer selection (37,404 jobs; FTF 86.905%; SLA 98.303%; revenue $21,149,184.67; utilization 65.891% overall and 47.243% for South Metro, the lowest region (restated after the §5b fix; the figures quoted at review time were 70.455% and 50.491%)). Three defects sat in the report layer rather than the data:
+A full review of the draft report checked every visual's fields, filters, sort order and formatting against the guide and against SQL. Page 1's volume and quality figures reconcile exactly with no slicer selection: 37,404 jobs,
+FTF 86.905%, SLA 98.303%, revenue $21,149,184.67.
+
+> **The two utilization figures did NOT reconcile, and this paragraph previously said they did.**
+> The §5b weekday fix was applied to SQL, Excel, the JSON exports, the dashboard and this document.
+> It was never applied to `powerbi/Build_PowerBI_Model.ps1`: `[Available Minutes]` filtered
+> `Dim_Date[IsWeekend] = 0` while `[Worked Minutes]` did not, so `[Utilization %]` reproduced the
+> exact defect §5b describes as corrected. The shipped report therefore evaluates to **70.455%**
+> overall and **50.491%** for South Metro, while every other artefact says **65.891%** and
+> **47.243%** — and all five regions differ.
+>
+> The build script is now fixed: `[Worked Minutes]` carries the weekday filter, and three measures
+> were added (`Overtime Minutes`, `Total Worked Minutes`, `Overtime % of Capacity`) so the weekend
+> work the fix surfaces has somewhere to be reported, matching `vw_TechnicianUtilization`. The
+> model is **31 measures**, not 28.
+>
+> **`powerbi/Ridgeline_KPI_Dashboard.pbix` has not been rebuilt and is still stale.** Rebuilding it
+> requires Power BI Desktop open on a blank report and a re-run of the script; nothing in this
+> repository can do it unattended, which is exactly why the defect survived a fix that touched every
+> other artefact. Until that is done, treat the `.pbix` utilization figures as pre-§5b. Three defects sat in the report layer rather than the data:
 
 | # | Defect | Evidence | Fix |
 |---|---|---|---|

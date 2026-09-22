@@ -503,7 +503,19 @@ in
       @('Expedite spend %',            "=INDEX(tKPI[ExpediteSpendPct],$lastKPI)",  '=Dashboard!$B$25', 0.01),
       @('Single-source spend %',       "=INDEX(tKPI[SingleSourceSpendPct],$lastKPI)",'=Dashboard!$B$26', 0.01),
       @('Top-5 vendor share %',        "=INDEX(tKPI[Top5VendorSharePct],$lastKPI)",'=Dashboard!$B$27', 0.01),
-      @('Value of rejected material',  '=SUM(tPO[RejectedValue])',                 '=SUMIFS(tPO[RejectedValue],tPO[OrderDate],">"&MIN(tPO[OrderDate])-1)', 0.05),
+      # This check compared SUM(tPO[RejectedValue]) against
+      # SUMIFS(tPO[RejectedValue], tPO[OrderDate], ">"&MIN(tPO[OrderDate])-1).
+      # That criterion is true for EVERY row -- a date is always greater than
+      # the minimum date minus one day -- so the SUMIFS collapsed to the SUM
+      # beside it. Both sides were the same arithmetic over the same column of
+      # the same extract, so the difference was exactly 0.0000 under any data
+      # and any defect. It was the only one of the fourteen that was not a
+      # cross-implementation check, and it could not fail.
+      #
+      # It now compares SQL's own TTM figure from the KPI extract against the
+      # Dashboard cell Excel computes from the purchase-order extract, which is
+      # the pattern every other check here follows.
+      @('Value of rejected material',  "=INDEX(tKPI[RejectedValue],$lastKPI)",     '=Dashboard!$C$16', 0.05),
       @('Queue: pairs assessed',       '=COUNTA(tQueue[PartNumber])',              '=COUNTA(tErosion[PartNumber])', 0.5),
       @('Queue: total opportunity',    '=SUM(tQueue[AnnualOpportunity])',          '=SUMIF(tErosion[AnnualOpportunity],">0")', 0.05)
     )

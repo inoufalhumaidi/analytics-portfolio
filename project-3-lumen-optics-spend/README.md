@@ -66,7 +66,7 @@ project-3-lumen-optics-spend/
 │   ├── Validate_PowerBI_Model.ps1    queries the model in DAX and reconciles 31 figures against SQL
 │   ├── DAX_Measures.md               the semantic model and every measure, with the reasoning
 │   ├── POWER_BI_BUILD_GUIDE.md       how to rebuild it, and the report pages to draw by hand
-│   └── Lumen_Spend_Scorecard.pbix    the built model (9 tables, 10 relationships, 69 measures)
+│   └── Lumen_Spend_Scorecard.pbix    the built model (10 tables, 10 relationships, 69 measures)
 ├── docs/
 │   ├── data_validation_report.md     what was tested, what broke, what was retained
 │   └── requirements_traceability_matrix.md   20 requirements traced to tests and evidence
@@ -168,7 +168,7 @@ problem.
 
 ## The Power BI model
 
-`powerbi/Build_PowerBI_Model.ps1` scripts the whole semantic model — 9 tables, 10 relationships and
+`powerbi/Build_PowerBI_Model.ps1` scripts the whole semantic model — 10 tables, 10 relationships and
 **69 DAX measures** — into a running Power BI Desktop session through the local Analysis Services
 engine it exposes. Sixty-nine measures clicked into a UI cannot be reviewed, diffed or rebuilt;
 scripted, they sit in source control beside the SQL that feeds them, and a reviewer can check that
@@ -213,6 +213,7 @@ sqlcmd -S <server> -E -d master     -i sql/01_create_schema.sql
 sqlcmd -S <server> -E -d master     -i sql/02_generate_synthetic_data.sql
 sqlcmd -S <server> -E -d LumenSpend -i sql/03_core_views.sql
 sqlcmd -S <server> -E -d LumenSpend -i sql/04_data_quality_checks.sql
+sqlcmd -S <server> -E -d LumenSpend -Q "EXEC dbo.usp_RunDataQualityChecks"   # the gate
 sqlcmd -S <server> -E -d LumenSpend -i sql/05_kpi_views.sql
 sqlcmd -S <server> -E -d LumenSpend -i sql/06_stored_procedures.sql
 sqlcmd -S <server> -E -d LumenSpend -i sql/07_uat_test_cases.sql     # expect 21/21
@@ -226,7 +227,9 @@ powershell powerbi/Build_PowerBI_Model.ps1                           # click the
 powershell powerbi/Validate_PowerBI_Model.ps1                        # expect 31/31
 ```
 
-`sql/04_data_quality_checks.sql` runs the QA gate, which **raises** when the mis-statement exceeds
+**The gate is a separate step.** `04_data_quality_checks.sql` *creates* `usp_RunDataQualityChecks`; it does not run it. Executing the procedure is what applies the tolerance — it passes here at **0.497% against 0.500%**, which is a margin of three thousandths and is reported as a margin rather than as a green light.
+
+`dbo.usp_RunDataQualityChecks` is the QA gate, and it **raises** when the mis-statement exceeds
 tolerance rather than printing and returning zero — so `sqlcmd -b` stops the sequence. It passes
 here at 0.497% against a 0.500% tolerance, so the build completes; tighten
 `@MaxMisstatementPctOfSpend` to see it stop.

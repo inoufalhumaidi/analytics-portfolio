@@ -89,7 +89,7 @@ ageing bucket. 36 applications worth $165,306 fall in exactly that window here.
 
 | Metric | Portfolio | Status | The cohort underneath |
 |---|---:|:---:|---|
-| Promise kept rate | 86.29% | Green | High-risk tier: **53.87%**, 244 broken promises worth $625,642 |
+| Promise kept rate | 86.60% | Green | High-risk tier: **54.57%**, 244 broken promises worth $625,642 |
 | Billing lag | 1.78 d | Green | Southeast DC: **3.22 d**, drifting 1.56 → 4.78 through 2025 |
 | Credit utilisation | 17.70% | Green | One account over limit at **106%**; three above the 80% target |
 
@@ -127,11 +127,11 @@ windowed running sum and a `TOP 1`; Excel computes it with a twelve-row helper b
 
 ## The priority action queue
 
-272 accounts carry a past-due balance. The queue ranks on **collectable exposure** — ageing-weighted
+262 accounts carry a past-due balance (272 enter the queue; the other 10 are admitted on a disputed balance still within terms). The queue ranks on **collectable exposure** — ageing-weighted
 past-due dollars, less 75% of the ageing-weighted *disputed* dollars, less cash already banked
 against the account — then bounds itself to what the team can work:
 
-**65 accounts, 10–12 per collector, carrying 81.3% of the collectable exposure.**
+**65 accounts, 10–13 per collector, carrying 81.3% of the collectable exposure.**
 
 | Action | Accounts | Past due | Exposure | On today's list |
 |---|---:|---:|---:|---:|
@@ -191,6 +191,7 @@ sqlcmd -S <server> -E -d master    -i sql/01_create_schema.sql
 sqlcmd -S <server> -E -d master    -i sql/02_generate_synthetic_data.sql
 sqlcmd -S <server> -E -d VantageAR -i sql/03_core_views.sql
 sqlcmd -S <server> -E -d VantageAR -i sql/04_data_quality_checks.sql
+sqlcmd -S <server> -E -d VantageAR -Q "EXEC dbo.usp_RunDataQualityChecks"   # EXPECTED TO FAIL
 sqlcmd -S <server> -E -d VantageAR -i sql/05_kpi_views.sql
 sqlcmd -S <server> -E -d VantageAR -i sql/06_dso_bridge.sql
 sqlcmd -S <server> -E -d VantageAR -i sql/07_stored_procedures.sql
@@ -200,6 +201,8 @@ powershell erp_extracts/Export_Extracts.ps1
 powershell excel/Build_Workbook.ps1
 powershell excel/Validate_Workbook.ps1                              # expect 27/27
 ```
+
+**The gate is a separate step, and that is easy to miss.** `04_data_quality_checks.sql` *creates* `usp_RunDataQualityChecks`; it does not run it. The gate only fires when the procedure is executed, which is why the line above is there. **This project's gate is meant to fail** — 96 planted duplicate receipts mis-state AR by **3.421% against a 1% tolerance**, the procedure raises, and `sqlcmd -b` returns a non-zero exit code. That failure is the demonstration that the detector fires; a build that goes green here has not run the gate.
 
 The generator is deterministic — hash-keyed rather than `RAND()` — so a rebuild reproduces the
 dataset byte for byte, and UAT-16 asserts all five fingerprints. Every figure quoted here is
@@ -222,7 +225,7 @@ with its data loaded.
 | 90+ share of AR | 3.35% | 3.00 | Amber |
 | **Unapplied cash % of AR** | **3.87%** | 0.50 | **Red** |
 | Billing lag (days) | 1.78 d | 2.00 | Green\* |
-| Promise kept rate | 86.29% | 80.00 | Green\* |
+| Promise kept rate | 86.60% | 80.00 | Green\* |
 | Open AR | $10,847,081.49 | — | — |
 | Open invoices | 2,346 | — | — |
 | **True cash cycle** | **63.37 d** | — | — |

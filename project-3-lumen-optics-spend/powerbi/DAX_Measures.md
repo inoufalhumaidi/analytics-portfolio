@@ -29,7 +29,7 @@ because it is the single most contestable input in the analysis.
 > wrong shape and concludes the code is wrong. `Build_PowerBI_Model.ps1` is the source of truth;
 > this file explains it. §1a records what changed and why.
 
-Nine tables, star-shaped, one direction of filter flow throughout.
+Ten tables, star-shaped, one direction of filter flow throughout.
 
 | Table | Role | Source | Grain |
 |---|---|---|---|
@@ -83,8 +83,9 @@ the conditional formatting — which is what a semantic model is actually for.
 reachable from the model — and that is a genuine trade-off, stated rather than hidden:
 
 - *Lost:* per-receipt analysis (reject reasons by receipt, partial-delivery patterns) and any
-  measure that needs to slice by receipt date rather than order date. `usp_RejectAnalysis` in
-  `sql/06_stored_procedures.sql` answers the reject-reason question instead.
+  measure that needs to slice by receipt date rather than order date. `RejectReasonCode` lives on
+  `Fact_GoodsReceipt` and nothing wraps it, so that question has to be asked in SQL against the
+  table directly — see §9, where the gap is stated rather than mitigated.
 - *Gained:* one definition of "what arrived and what was usable", with the as-of cut-off applied
   in one place. The `USERELATIONSHIP` design put that cut-off in every measure that touched it,
   and a measure that forgot it would have silently counted receipts booked after the reporting
@@ -222,6 +223,20 @@ the question it can answer, and maverick spend answers the rest.
 
 This is the centrepiece and the thing purchase price variance cannot see.
 
+> **Five of the blocks in this section are NOT measures in the built model.**
+> `First Price`, `Last Price`, `Years Elapsed`, `Expected Price` and
+> `Actual Erosion %` are computed in SQL by `fn_PriceErosion` and arrive in the
+> model as **columns** on the `PriceErosion` table. `Erosion Capture %
+> (Spend Weighted)` is likewise a SQL figure, surfaced through
+> `[Erosion Capture %]`.
+>
+> The DAX is kept because it is the clearest statement of the arithmetic, and
+> because anyone rebuilding this in a tool without a SQL layer will need it.
+> But it is **illustrative**: search the `.pbix` for these names and you will
+> not find them. Section 1 says the build script is the source of truth, and
+> that applies to this section too — it previously did not say so, and a reader
+> had no way to tell these eight blocks from the sixty-nine that are real.
+
 ```dax
 Benchmark Erosion % =
 AVERAGEX ( VALUES ( Dim_Part[Category] ),
@@ -338,9 +353,15 @@ the first.
 **Reject attribution lives in SQL, not here.** Only supplier-caused rejects are negotiable — a
 rejection against a drawing revision issued *after* the order is Lumen's problem, and charging it
 to the supplier in a business review destroys credibility faster than any number wins. That split
-needs `RejectReasonCode` at receipt grain, which this model does not carry (§1a), so it is answered
-by `usp_RejectAnalysis` in `sql/06_stored_procedures.sql`. Stating where it lives is the point:
-the alternative is a reader assuming the Power BI rejected-value figure is already attributed.
+needs `RejectReasonCode` at receipt grain, which this model does not carry (§1a).
+
+**It is not answered anywhere yet, and that is a gap rather than a design choice.** The column
+exists on `Fact_GoodsReceipt`; no view or procedure wraps it, so the question has to be asked with
+SQL directly against that table. An earlier draft of this document named a `usp_RejectAnalysis` in
+`sql/06_stored_procedures.sql` as the answer. There is no such procedure — the file creates six,
+and none of them is it. Saying so plainly is the point: the alternative is a reader assuming the
+Power BI rejected-value figure is already attributed, which is exactly the assumption this section
+exists to prevent.
 
 ```dax
 Receipts Booked  = CALCULATE ( COUNTROWS ( POLine ), POLine[IsReceived] = TRUE () )
@@ -411,6 +432,13 @@ report and the Excel workbook will rank the same negotiations differently.
 ---
 
 ## 8. Targets and conditional formatting
+
+> **`Target Value` and `Warning Value` are not measures in the built model.**
+> They are **columns** on `Ref_SpendTargets`, read directly by the `LOOKUPVALUE`
+> calls inside each `… Colour` and `… Status` measure — which *are* built, 16 of
+> them, generated from `$ragMetrics`. The two blocks below show the lookup in
+> isolation for readability.
+
 
 ```dax
 Target Value =

@@ -12,7 +12,7 @@ THE TWO NUMBERS THIS FILE EXISTS TO PUT SIDE BY SIDE
 
     Neither is wrong. They answer different questions, and only one of them is
     the question on the agenda. Publishing them adjacent, from the same script,
-    is the entire argument: a reader who sees 93.86% and 33.10% together does
+    is the entire argument: a reader who sees 93.86% and 51.96% together does
     not need the rest of the analysis explained to them.
 
 WHY THE QUEUE RANKS THE WAY IT DOES
@@ -164,9 +164,29 @@ AS RETURN
         CurrentMustShip= SUM(CASE WHEN v.Priority = 'MustShip' THEN v.IsCurrent ELSE 0 END),
         NoEvidence     = SUM(CASE WHEN v.HasEvidence = 0 THEN 1 ELSE 0 END),
         Insufficient   = SUM(CASE WHEN v.HasEvidence = 1 AND v.MeetsPolicy = 0 THEN 1 ELSE 0 END),
-        StaleByCode    = SUM(CASE WHEN v.MeetsPolicy = 1 AND v.StaleByCode = 1 THEN 1 ELSE 0 END),
-        StaleByReq     = SUM(CASE WHEN v.MeetsPolicy = 1 AND v.StaleByCode = 0
-                                   AND v.StaleByRequirement = 1 THEN 1 ELSE 0 END),
+        /*
+        THE PRECEDENCE HERE MUST MATCH vw_RequirementVerification, AND IT DID NOT.
+
+        03_core_views.sql resolves StaleByRequirement FIRST, so a requirement
+        stale on both counts reports as 'requirement changed' -- deliberately,
+        because that one needs a systems engineer before anyone re-runs
+        anything, and re-running against changed wording risks certifying the
+        wrong thing.
+
+        This cut resolved StaleByCode first and excluded it from StaleByReq, so
+        all 7 requirements stale on both counts landed in StaleByCode and
+        StaleByReq was 0 in every subsystem. The subsystem table therefore said
+        95 / 0 while the requirement view, the verification queue
+        (88 RERUN / 7 REVIEW_THEN_RERUN), the case study, the validation report
+        and the Power BI measures all said 88 / 7.
+
+        Both totals were 95, so nothing failed to reconcile at the top -- the
+        disagreement was entirely in how the 95 split, which is the only part
+        that decides who picks the work up.
+        */
+        StaleByReq     = SUM(CASE WHEN v.MeetsPolicy = 1 AND v.StaleByRequirement = 1 THEN 1 ELSE 0 END),
+        StaleByCode    = SUM(CASE WHEN v.MeetsPolicy = 1 AND v.StaleByRequirement = 0
+                                   AND v.StaleByCode = 1 THEN 1 ELSE 0 END),
         ReadinessPct   = CAST(100.0 * SUM(CASE WHEN v.Priority = 'MustShip' THEN v.IsCurrent ELSE 0 END)
                             / NULLIF(SUM(CASE WHEN v.Priority = 'MustShip' THEN 1 ELSE 0 END), 0) AS DECIMAL(6,2)),
         BuildsChanged   = ISNULL(ch.BuildsChanged, 0),

@@ -101,9 +101,24 @@ VALUES
 DECLARE @DQFlagCount INT;
 SELECT @DQFlagCount = COUNT(*) FROM dbo.vw_DQ_JobAnomalies WHERE JobID = 'JOB-UAT003' AND AnomalyType = 'TIMESTAMP_INVERSION';
 
-INSERT INTO #UATResults VALUES ('UAT-03', 'DQ view flags a job with ActualEnd < ActualStart',
-    '1', CAST(@DQFlagCount AS VARCHAR(20)),
-    CASE WHEN @DQFlagCount = 1 THEN 'PASS' ELSE 'FAIL' END);
+-- ...and that it DISAPPEARS after correction.
+--
+-- The header above has always promised this second half and the test never did
+-- it: it inserted the broken row, counted it once, and stopped. A detector that
+-- fires is only half of what a detector has to do -- one that fires on
+-- everything would pass the first assertion too. Correcting the row and
+-- requiring the flag to clear is what separates "it detects inversions" from
+-- "it flags this row".
+UPDATE dbo.Fact_ServiceJobs
+   SET ActualEnd = '2025-01-08T12:30:00'      -- now after ActualStart
+ WHERE JobID = 'JOB-UAT003';
+
+DECLARE @DQFlagAfterFix INT;
+SELECT @DQFlagAfterFix = COUNT(*) FROM dbo.vw_DQ_JobAnomalies WHERE JobID = 'JOB-UAT003' AND AnomalyType = 'TIMESTAMP_INVERSION';
+
+INSERT INTO #UATResults VALUES ('UAT-03', 'DQ view flags ActualEnd < ActualStart, and clears when corrected',
+    '1 then 0', CAST(@DQFlagCount AS VARCHAR(20)) + ' then ' + CAST(@DQFlagAfterFix AS VARCHAR(20)),
+    CASE WHEN @DQFlagCount = 1 AND @DQFlagAfterFix = 0 THEN 'PASS' ELSE 'FAIL' END);
 
 -- =============================================================================
 -- UAT-04: Priority Action Queue flags a deliberately underutilized technician

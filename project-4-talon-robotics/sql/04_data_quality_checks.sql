@@ -200,9 +200,22 @@ AS RETURN
     WHERE dd.[Date] < rd.[Date]
 
     UNION ALL
-    SELECT 'ORPHAN_DIMENSION_KEY', 'TestRun', CAST(tr.TestRunKey AS VARCHAR(20)),
+    -- EntityRef must be the TestCaseID, not the TestRunKey. The gate in
+    -- usp_RunDataQualityChecks attributes 'TestRun' anomalies by matching
+    -- EntityRef against Dim_TestCase.TestCaseID, so a bare integer key could
+    -- never match and this check -- declared CountsTowardExposure = 1 -- was
+    -- structurally unable to move the gate. Harmless today at 0 orphans, which
+    -- is exactly why it survived: the catalog says the check counts, and it
+    -- could not.
+    SELECT 'ORPHAN_DIMENSION_KEY', 'TestRun',
+           -- The TestCaseID where one exists, so the gate can attribute the
+           -- anomaly to a requirement; the raw key where the orphan IS the
+           -- missing test case, because then there is genuinely nothing to
+           -- attribute it to and saying so is better than inventing a match.
+           ISNULL(tc.TestCaseID, CONCAT('TestRunKey ', tr.TestRunKey)),
            'Fact row points at a dimension member that does not exist.'
     FROM dbo.Fact_TestRun tr
+    LEFT JOIN dbo.Dim_TestCase tc ON tc.TestCaseKey = tr.TestCaseKey
     WHERE NOT EXISTS (SELECT 1 FROM dbo.Dim_TestCase t WHERE t.TestCaseKey = tr.TestCaseKey)
        OR NOT EXISTS (SELECT 1 FROM dbo.Dim_Build b    WHERE b.BuildKey    = tr.BuildKey)
        OR NOT EXISTS (SELECT 1 FROM dbo.Dim_Person p   WHERE p.PersonKey   = tr.RunByKey)

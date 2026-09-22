@@ -26,7 +26,7 @@ and change it.
 
 ## 1. Model shape
 
-Eleven tables, star-shaped, one direction of filter flow throughout.
+Twelve tables, star-shaped, one direction of filter flow throughout.
 
 | Table | Role | Source | Grain |
 |---|---|---|---|

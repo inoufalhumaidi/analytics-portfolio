@@ -209,8 +209,8 @@ AS RETURN
     -- That fan-out survives review because numerator and denominator both
     -- inflate: the result stays above 100, stays plausible, and is quietly a
     -- line-count-weighted average of the index rather than the index. It moved
-    -- 33 of 40 vendors' rank positions, and CostIndexVsBest carries 40% of the
-    -- weight in usp_VendorRanking.
+    -- 33 of 36 vendors' rank positions, and CostIndexVsBest carries 40% of the
+    -- weight in usp_VendorScorecard's CompositeScore.
     VendorIndex AS (
         SELECT pv.VendorKey,
                Landed         = SUM(pv.Landed),
@@ -360,9 +360,24 @@ AS RETURN
                -- not MIN(key): most pairs are touched by more than one buyer,
                -- and handing the negotiation to whoever sorts first is an
                -- accident, not an assignment.
+               --
+               -- The duplicate exclusion below is NOT optional. The outer CTE
+               -- scopes itself with `PONumber NOT LIKE 'PO-D%'`; this
+               -- correlated subquery opens fn_POLineCost again and originally
+               -- applied only the date predicate, so every other column on the
+               -- row was computed on de-duplicated spend while the buyer was
+               -- chosen on spend inflated by duplicated requisitions.
+               --
+               -- It changed a real assignment: on LOM-0043 / VEN-029 the
+               -- duplicate line was the entire margin between two buyers, and
+               -- the negotiation was handed to BUY-03 when BUY-04 had actually
+               -- placed the most spend. One pair in 185 -- which is why it
+               -- survived: a filter dropped in a nested scope is invisible
+               -- unless you diff the two populations.
                PrimaryBuyer = (SELECT TOP 1 c2.BuyerKey
                                FROM dbo.fn_POLineCost(@AsOf) c2
                                WHERE c2.PartKey = c.PartKey AND c2.VendorKey = c.VendorKey
+                                 AND c2.PONumber NOT LIKE 'PO-D%'
                                  AND c2.OrderDate > DATEADD(MONTH, -12, @AsOf)
                                GROUP BY c2.BuyerKey
                                ORDER BY SUM(c2.ExtendedPrice) DESC, c2.BuyerKey)

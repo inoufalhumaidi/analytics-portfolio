@@ -27,6 +27,19 @@ param(
     [string]$ServerInstance = 'localhost\TEW_SQLEXPRESS',
     [string]$Database       = 'TalonDelivery',
     [string]$OutputPath     = $PSScriptRoot,
+    # DECLARED, PRINTED IN THE BANNER, AND USED BY NOTHING.
+    #
+    # Every extract below reads a view that is pinned to a literal date inside
+    # SQL -- vw_RAIDExposure is fn_RAIDExposure('2026-09-30'), vw_ReadinessKPI
+    # is fn_ReadinessKPI(RC, '2026-09-30') -- so passing -AsOfDate 2025-06-30
+    # printed a banner claiming a June-2025 extract and wrote byte-identical
+    # September-2026 files, which then fed the Excel control and every figure
+    # downstream.
+    #
+    # This is the third instance in this project of the class it documents
+    # itself: a point-in-time parameter that is accepted and ignored. It is
+    # kept here ONLY as the banner label, and the banner now says so, rather
+    # than being removed and losing the record of the trap.
     [string]$AsOfDate       = '2026-09-30'
 )
 
@@ -55,7 +68,7 @@ function Invoke-Extract {
 }
 
 Write-Host ""
-Write-Host "Talon Robotics -- programme extract build (as of $AsOfDate, at the release candidate)" -ForegroundColor Cyan
+Write-Host "Talon Robotics -- programme extract build (views are pinned to $AsOfDate in SQL; this switch is a label, not a filter)" -ForegroundColor Cyan
 Write-Host ("-" * 88)
 $total = 0
 

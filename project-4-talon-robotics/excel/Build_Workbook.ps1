@@ -38,6 +38,23 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+<#
+A VARIABLE FOLLOWED BY A COLON IS SCOPE NOTATION, NOT TEXT.
+
+    "B$row:D$row"  ->  "B12"          the ":D$row" is silently swallowed
+    "B${row}:D${row}"  ->  "B12:D12"
+
+PowerShell parses `$row:` the same way it parses `$env:PATH` -- as a drive or
+scope qualifier -- so the rest of the range disappears and the expression still
+produces a perfectly valid single-cell reference. Nothing raises. A
+NumberFormat applied this way formats one cell of the intended range; a named
+range built this way covers one cell of the intended block, and a SUM over it
+returns a number that looks plausible.
+
+Every multi-cell range string in this file therefore uses ${...} or $(...).
+#>
+
 function RGBv([int]$r, [int]$g, [int]$b) { return $r + ($g * 256) + ($b * 65536) }
 
 $Slate   = RGBv 31 45 61
@@ -193,6 +210,10 @@ in
         $calc.Range("D$rr").Formula = "=IF(ROW()=$qFirst,C$rr,D$($rr-1)+C$rr)"
         $calc.Range("E$rr").Formula = "=IF(D$rr<=RigHoursPerWeek,1,0)"
     }
+    # Named so the Dashboard can point at it. Without this the block was
+    # computed and then referenced by nothing at all.
+    $wb.Names.Add('CalcWithinWeek', $calc.Range("E$($qFirst):E$($qFirst + $nQueue - 1)")) | Out-Null
+
     $calc.Range("A3").Value2 = 'Rank'
     $calc.Range("B3").Value2 = 'RequirementID'
     $calc.Range("C3").Value2 = 'RigHours'
@@ -316,8 +337,12 @@ in
     $d.Range("B$($sr+3)").Formula = "=B$($sr+2)/RigHoursPerWeek"
     $d.Range("B$($sr+3)").NumberFormat = '0.0'
     $d.Range("C$($sr+3)").Value2 = 'This is the honest schedule answer: it is the only figure here a programme board can act on without a further study.'
+    # SUM over the Calc sheet's live boundary, NOT COUNTIF over the static
+    # IsThisWeek column SQL computed at 180 rig hours. The static version made
+    # this figure -- the one the README promises responds to the Rig hours cell
+    # -- the one figure on the sheet that could not respond to it.
     $d.Range("A$($sr+4)").Value2 = 'Schedulable this week'
-    $d.Range("B$($sr+4)").Formula = '=COUNTIF(tQueue[IsThisWeek],1)'
+    $d.Range("B$($sr+4)").Formula = '=SUM(CalcWithinWeek)'
 
     # Named, so the validator and any future reader address these by name
     # rather than by cell. This block sits below the subsystem table, so its
@@ -341,7 +366,7 @@ in
     $q = $made['Verification Queue']
     $q.Range('A1').Value2 = 'VERIFICATION QUEUE -- what to do next, bounded by rig capacity'
     $q.Range('A1').Font.Size = 14; $q.Range('A1').Font.Bold = $true; $q.Range('A1').Font.Color = $Slate
-    $q.Range('A2').Formula = '="Ranked by priority score. The first "&COUNTIF(tQueue[IsThisWeek],1)&" rows fit inside "&RigHoursPerWeek&" rig hours -- one week. A list of everything outstanding is not a plan."'
+    $q.Range('A2').Formula = '="Ranked by priority score. The first "&SUM(CalcWithinWeek)&" rows fit inside "&RigHoursPerWeek&" rig hours -- one week. A list of everything outstanding is not a plan."'
     $q.Range('A2').Font.Italic = $true; $q.Range('A2').Font.Color = $GreyTxt
     $qh = @('Rank','Requirement','Subsystem','Type','Priority','Owner','Action','Rig hrs','Cumulative','This week','What to do')
     for ($i = 0; $i -lt $qh.Count; $i++) { $q.Cells.Item(4, $i + 1).Value2 = $qh[$i] }

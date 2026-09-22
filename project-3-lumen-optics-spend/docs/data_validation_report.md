@@ -2,7 +2,7 @@
 ## Lumen Optics Manufacturing — Photonics Spend Scorecard
 
 **Reporting date:** 2025-12-31  
-**Dataset:** 6,327 purchase-order lines · 6,127 goods receipts · 660 price agreements · 140 parts · 36 vendors  
+**Dataset:** 6,327 purchase-order lines · 6,127 goods receipts · 655 price agreements · 140 parts · 36 vendors  
 **Status:** validated — 21/21 acceptance tests pass, 14/14 SQL-versus-Excel checks reconcile
 
 > **Data disclosure.** Lumen Optics Manufacturing is a fictional company. Every figure is
@@ -159,8 +159,9 @@ line-count-weighted average of the index rather than the index.
 | Largest error | **3.07 index points** (VEN-018: 101.38 published vs 104.45 actual) |
 | Vendors whose **rank position** moved | **33** |
 
-And the index is not decorative: it carries **40% of the weight** in `usp_VendorRanking`'s
-`CompositeScore`, the single figure the procedure is designed to be sorted on.
+And the index is not decorative: it carries **40% of the weight** in `usp_VendorScorecard`'s
+`CompositeScore` — the one figure on that scorecard intended to be sorted on, though the procedure
+itself returns rows ordered by `TotalSpend`, so the sort is the reader's to apply.
 
 **Why `UAT-12` did not catch it.** The test asserted:
 
@@ -189,7 +190,7 @@ shared definition, `fn_DuplicatePOLines`, used by the data-quality layer, the ve
 the Power BI model alike.
 
 **Restated figures.** Vendor cost indices changed for all 36 vendors (max 3.07 points) and
-`usp_VendorRanking`'s composite score changed accordingly. No headline KPI moved: the index feeds
+`usp_VendorScorecard`'s composite score changed accordingly. No headline KPI moved: the index feeds
 the vendor ranking, not the spend scorecard, and `fn_SpendKPI` never referenced it. Committed spend
 is unchanged at $142,314,429.11 — `UAT-13` asserts it, and it holds under both the old prefix test
 and the new behavioural one.

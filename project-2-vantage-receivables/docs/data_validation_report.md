@@ -74,7 +74,7 @@ It also made two further rules expressible:
   on 28 December and matched on 4 January must not cure a December ageing bucket. 36 applications
   worth $165,306 fall in exactly that window in this dataset.
 - A receipt with no applications against it is fully unapplied. 57 receipts are in that state,
-  the oldest for 679 days.
+  the oldest of them for 668 days. (The 679-day figure published elsewhere is a different population: the oldest receipt carrying *any* unapplied remainder, whether or not part of it was matched.)
 
 **The lesson:** a modelling shortcut that cannot represent a category will not leave a gap in the
 output. It will attribute that category to whatever it *can* represent, and the result looks
@@ -218,7 +218,7 @@ exposure.
 | `DUPLICATE_RECEIPT` | Receipt | High | Balance | 96 | $371,039.99 | no |
 | `OVER_APPLIED_CASH` | Invoice | High | Balance | 101 | $371,039.99 | **yes** |
 | `UNAPPLIED_CASH_AGED` | Receipt | High | Routing | 65 | $265,487.11 | no |
-| `RECEIPT_BEFORE_INVOICE` | Receipt | High | Timing | 30 | $100,496.95 | no |
+| `RECEIPT_BEFORE_INVOICE` | Receipt | High | Timing | 27 | $100,496.95 | no |
 | `APPLICATION_BEFORE_RECEIPT` | Application | High | Timing | 0 | — | no |
 | `ADJUSTMENT_EXCEEDS_INVOICE` | Invoice | High | Balance | 0 | — | no |
 | `ORPHAN_DIMENSION_KEY` | Invoice | High | Integrity | 0 | — | no |
@@ -272,7 +272,7 @@ states the result on its own face. **All 27 checks reconcile.**
 | Unapplied cash % of AR | 3.87 | 3.87 | 0.0036 |
 | **Billing lag (days)** | **1.78** | **1.78** | **0.0041** |
 | **True cash cycle (days)** | **63.37** | **63.37** | **0.0039** |
-| **Promise kept rate %** | **86.29** | **86.29** | **0.0042** |
+| **Promise kept rate %** | **86.60** | **86.60** | **0.0042** |
 | Net exposure (AR less cash held) | 10,427,689.36 | 10,427,689.36 | 0.0000 |
 
 Plus the five ageing buckets re-derived in Excel from days past due rather than read from the SQL

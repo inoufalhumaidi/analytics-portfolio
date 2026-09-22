@@ -380,9 +380,11 @@ GO
 --
 --   * On a coastal airframe the two clocks run at nearly the same rate, so
 --     scheduled replacement usually wins and unscheduled removals are rare.
---   * On a mountain airframe the physics clock runs 2.4x faster, so 150 stress
---     hours arrives at about 62 flight hours -- long before anyone is booked to
---     touch it. The physics clock wins, and the removal is a failure.
+--   * On a Highland airframe the physics clock runs at 2.15 stress hours per
+--     flight hour, so 150 stress hours arrives at about 69 -- long before anyone
+--     is booked to touch it. The physics clock wins, and the removal is a
+--     failure. (No airframe reaches the MOUNTAIN profile's own 2.4 multiplier;
+--     every airframe flies a MIX, and the base ratio is what wear responds to.)
 --
 -- Nothing here says "make Highland worse". Highland is worse because of the
 -- work it flies, and an hour-based interval cannot see the difference.
@@ -406,14 +408,20 @@ SELECT a.AirframeKey, a.TailNumber, ct.ComponentTypeKey, ct.ComponentCode, p.Pos
            scale = interval / (-ln 0.90)^(1/shape)
 
        So IntervalStressHours means something precise: it is the stress-hour
-       figure at which one part in ten has already failed. On a coastal airframe
-       stress accrues at about 1.02x flight hours, so the 150 FLIGHT hour
-       interval lands almost exactly on B10 and roughly a tenth of rotors fail
-       before replacement -- a normal, well-run fleet.
+       figure at which one part in ten has already failed.
 
-       On a mountain airframe stress accrues at 2.4x, so 150 flight hours is
-       around 360 stress hours, well past B10, and most rotors fail first. Same
-       part, same interval, same policy. Only the work is different.
+       On a Coastal airframe stress accrues at 1.17x flight hours, so the 150
+       FLIGHT hour interval is about 176 stress hours -- modestly past B10 --
+       and 21.4% of its rotors fail before replacement. On a Highland airframe
+       stress accrues at 2.15x, so the same 150 flight hours is 323 stress
+       hours, far past B10, and 56.3% fail first.
+
+       Same part, same interval, same policy; 2.6 times the failure rate. Only
+       the work is different.
+
+       Note these are BASE ratios, not profile multipliers. The MOUNTAIN profile
+       coefficient is 2.400, but no airframe reaches it because every airframe
+       flies a mix -- the hardest-worked in the fleet sits at 2.18.
        */
        WeibullScale = CAST(si.IntervalStressHours / POWER(-LOG(0.90), 1.0 / si.WeibullShape) AS DECIMAL(9,3))
 INTO #Pos
@@ -462,8 +470,8 @@ The loop runs until a pass closes nothing, NOT for a fixed number of passes.
 This was originally capped at six, which looked generous -- a 150-hour interval
 against roughly 560 flight hours per airframe is under four replacements. It is
 wrong for exactly the airframes this project is about: a mountain airframe
-accrues stress 2.4x faster, burns a rotor set every ~62 flight hours, and needs
-about nine generations. Capping at six left generation seven created but never
+accrues stress at 2.15x, burns a rotor set every ~69 flight hours, and needs
+seven generations -- one more than the cap allowed. Capping at six left generation seven created but never
 closed, so those components sat permanently fitted with their stress life long
 exhausted and never failed.
 

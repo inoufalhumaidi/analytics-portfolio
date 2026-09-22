@@ -139,8 +139,10 @@ of two clocks finishes first:
 - the **physics clock** — stress reaching its drawn life.
 
 On a coastal airframe the clocks run at nearly the same rate and scheduled replacement usually wins.
-On a mountain airframe the physics clock runs 2.4× faster, so 150 stress hours arrives around 62
-flight hours and the removal is a failure. **Nothing in the generator says "make Highland worse."**
+On a Highland airframe it runs at 2.15 — 2.18 on the hardest-worked aircraft in the fleet — so 150
+stress hours arrives around 69 flight hours and the removal is a failure. **Nothing in the generator
+says "make Highland worse."** No airframe reaches the MOUNTAIN profile's own 2.4 multiplier, because
+every airframe flies a mix.
 
 The interval is calibrated at the **B10 life** — the point by which 10% of the population has failed
 — because that is how intervals are actually set. An earlier version set the scale at the *mean*,
@@ -223,7 +225,7 @@ A rebuild could have reassigned the entire fleet's workload and reproduced it ex
 **A materialised optimisation, and the test that makes it safe.** A 57-threshold sweep took over ten
 minutes because `vw_SensorFeatures` recomputed its windows on every pass. `dbo.AlertFrontier` keeps
 only the points where a component's running-maximum vibration increases — 22,006 rows instead of
-84,000 — and the sweep now takes **1.2 seconds**. UAT-35 recomputes the alert set the slow way and
+73,900 — and the sweep now takes **1.2 seconds**. UAT-35 recomputes the alert set the slow way and
 requires it to match install for install and lead time for lead time, because a fast answer that
 disagrees with the slow one is worse than the slow one.
 

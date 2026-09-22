@@ -83,7 +83,21 @@ $xl.Visible = $false
 $xl.DisplayAlerts = $false
 
 try {
-    $wb = $xl.Workbooks.Open($WorkbookPath)
+    <#
+    READ-ONLY, and that is not caution for its own sake.
+
+    Opening the workbook read-write lets Excel rewrite parts of the file just by
+    looking at it -- the modified timestamp, the calculation chain, an empty
+    threaded-comments part. The file then shows as changed in git after a
+    validation run that changed nothing, and the artefact a reviewer clones can
+    drift from the one that was actually validated.
+
+    Read-only still allows the control cells to be changed IN MEMORY, which is
+    what the final block does. It only prevents those probes reaching the disk.
+
+    Projects 2, 3 and 4 open read-only; this one and Project 1 did not.
+    #>
+    $wb = $xl.Workbooks.Open($WorkbookPath, 0, $true)   # 3rd arg = ReadOnly
     $xl.CalculateFullRebuild()
 
     # --- 1. the sheets a reader opens ------------------------------------

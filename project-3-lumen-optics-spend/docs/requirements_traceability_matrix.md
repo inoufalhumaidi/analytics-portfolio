@@ -35,7 +35,7 @@ rather than take it.
 | **BR-09** | Decide the ACTION by leverage, not only by value | Category managers | M | `LeverageScore` + the `ActionCode` ladder | UAT-08 | 5 action types; sole-source routed to `DUAL_SOURCE` |
 | **BR-10** | Bound the worklist to what a category manager can actually run | CPO | M | `IsThisQuarter`, `BuyerRank`, `@NegotiationsPerBuyer` | UAT-10 | 43 pairs covering **65.6%** of the gap |
 | **BR-11** | Assign each negotiation to the person who actually buys the part | Sourcing ops | S | Spend-weighted `PrimaryBuyer` in the queue | UAT-11 | 0 mismatches across 185 pairs |
-| **BR-12** | Say plainly where there is no leverage and no case for creating any | Category managers | S | `ACCEPT` action with a written reason | UAT-09 | 73 pairs / $276,461, largest single $30,137 |
+| **BR-12** | Say plainly where there is no leverage and no case for creating any | Category managers | S | `ACCEPT` action with a written reason | UAT-09 | 73 pairs / $276,461, largest single $30,142 |
 | **BR-13** | Separate quality loss from price loss | Supplier quality | S | `FIX_QUALITY` action; `RejectedValue`; reject attribution | UAT-08 | **$1,571,168** of material paid for and unusable |
 | **BR-14** | Detect procurement data defects and refuse to publish when material | Controller / Audit | M | `usp_RunDataQualityChecks` with `@MaxMisstatementPctOfSpend` | UAT-15, 17 | Gate **PASSES at 0.497%** against a 0.500% tolerance |
 | **BR-15** | Quantify mis-statement without double-counting cause and effect | Controller | M | `ImpactClass` + `CountsTowardExposure` in `vw_DQ_CheckCatalog` | UAT-16 | $722,990 counted once; defect count 114 → 94 |
@@ -82,7 +82,7 @@ All **21** cases pass. Definitions in `sql/07_uat_test_cases.sql`.
 | UAT-06 | BR-04 | Erosion windows cannot overlap | PASS — 0 |
 | UAT-07 | BR-04 | Capture agrees with its own components | PASS — < 0.01 |
 | UAT-08 | BR-08, BR-09, BR-13 | One known action and an instruction per pair | PASS — 0 bad |
-| UAT-09 | BR-12 | Nothing ≥ $100k parked as `ACCEPT` | PASS — max $30,137 |
+| UAT-09 | BR-12 | Nothing ≥ $100k parked as `ACCEPT` | PASS — max $30,142 |
 | UAT-10 | BR-10 | Capacity respected | PASS — 0 buyers over |
 | UAT-11 | BR-11 | Buyer assignment follows the spend | PASS — 0 mismatches |
 | UAT-12 | BR-07 | Cost index never below 100 | PASS — 0 |

@@ -58,8 +58,17 @@ DECLARE @fpRAID INT = (
     SELECT CHECKSUM_AGG(CAST(SubsystemKey * 13 + Probability * 5 + Impact AS INT))
     FROM dbo.Fact_RAID);
 
+-- The THIRD fingerprint. The generator prints all three under "asserted by the
+-- UAT suite"; this suite asserted two. That matters more than it looks: two of
+-- the planted defects pick their victims with UPDATE TOP (n) and no ORDER BY,
+-- so which rows get the defect is the engine's choice -- and the work-item
+-- fingerprint is the one that would move if that choice ever changed.
+DECLARE @fpWork INT = (
+    SELECT CHECKSUM_AGG(CAST(RequirementKey * 17 + ISNULL(ClosedDateKey,0) % 9973 AS INT))
+    FROM dbo.Fact_WorkItem);
+
 /* ---------------------------------------------------------------------------
-UAT-01  The four verification states partition the population exactly.
+UAT-01  The five verification states partition the population exactly.
 --------------------------------------------------------------------------- */
 DECLARE @reqs INT = (SELECT COUNT(*) FROM dbo.Dim_Requirement WHERE ReqStatus = 'Baselined');
 DECLARE @stated INT = (SELECT COUNT(*) FROM dbo.vw_RequirementVerification
@@ -499,8 +508,9 @@ UAT-22  Reproducibility: regenerating reproduces the documented fingerprints.
 --------------------------------------------------------------------------- */
 INSERT INTO #UATResults VALUES ('UAT-22','Reproducibility',
  'Fingerprints match the documented values for a hash-keyed rebuild',
- '8806 / 135', CAST(@fpRun AS VARCHAR(20)) + ' / ' + CAST(@fpRAID AS VARCHAR(20)),
- CASE WHEN @fpRun = 8806 AND @fpRAID = 135 THEN 'PASS' ELSE 'FAIL' END,
+ '8806 / 135 / 7942',
+ CAST(@fpRun AS VARCHAR(20)) + ' / ' + CAST(@fpRAID AS VARCHAR(20)) + ' / ' + CAST(@fpWork AS VARCHAR(20)),
+ CASE WHEN @fpRun = 8806 AND @fpRAID = 135 AND @fpWork = 7942 THEN 'PASS' ELSE 'FAIL' END,
  'Every figure quoted in the case study is only checkable if the dataset can be rebuilt byte for byte. Hash-based pseudo-randomness gives that; RAND() and NEWID() do not.');
 
 /* ---------------------------------------------------------------------------

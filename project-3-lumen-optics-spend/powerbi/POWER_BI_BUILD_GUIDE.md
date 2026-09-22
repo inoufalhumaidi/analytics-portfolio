@@ -59,9 +59,9 @@ definition. Agreement is necessary, not sufficient.
 
 ## 3. The model
 
-**Nine tables.** Four dimensions (`Dim_Date`, `Dim_Vendor`, `Dim_Part`, `Dim_Buyer`), three facts
-loaded from SQL views (`POLine`, `PriceErosion`, `RenegotiationQueue`) and two reference tables
-(`Ref_SpendTargets`, `Ref_PriceErosionBenchmark`), plus `Ref_Reporting`.
+**Ten tables.** Four dimensions (`Dim_Date`, `Dim_Vendor`, `Dim_Part`, `Dim_Buyer`), three facts
+loaded from SQL views (`POLine`, `PriceErosion`, `RenegotiationQueue`) and three reference tables
+(`Ref_SpendTargets`, `Ref_PriceErosionBenchmark`, `Ref_Reporting`).
 
 The facts come from the **views**, not the raw tables. The landed-cost identity, the dated contract
 resolution and the erosion model are each defined once in SQL and asserted by the acceptance tests;

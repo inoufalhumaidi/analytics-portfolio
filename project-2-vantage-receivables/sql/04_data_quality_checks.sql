@@ -64,7 +64,11 @@ FROM (VALUES
  ('ADJUSTMENT_EXCEEDS_INVOICE','Invoice','High',  'Balance',   CAST(0 AS BIT), 'Credit memos and write-offs together exceed the invoice value. Also a cause of over-application.'),
  ('RECEIPT_BEFORE_INVOICE','Receipt',   'High',   'Timing',    CAST(0 AS BIT), 'A receipt is dated before the invoice it settles. Corrupts days-to-pay and DSO without changing the balance.'),
  ('APPLICATION_BEFORE_RECEIPT','Application','High',  'Timing',    CAST(0 AS BIT), 'Cash was matched to an invoice before it reached the bank. Impossible in fact, so it means the application date was keyed wrong -- and it cures an ageing bucket early.'),
- ('UNAPPLIED_CASH_AGED','Receipt',      'High',   'Routing',   CAST(0 AS BIT), 'A receipt has sat unmatched for more than 90 days. The customer has paid, the invoice still shows open, and the queue will send a collector to chase them.'),
+ -- CUSTOMER, not Receipt. fn_UnappliedCash GROUPs BY CustomerKey, so every row this
+ -- check emits is a customer. Declared as 'Receipt' it was rated 65 / 27,601 = 0.235%,
+ -- a numerator and a denominator from different populations -- the defect this catalog
+ -- exists to prevent. Against its real population it is 65 of 400 customers, 16.25%.
+ ('UNAPPLIED_CASH_AGED','Customer',     'High',   'Routing',   CAST(0 AS BIT), 'A customer has cash sitting unmatched for more than 90 days. They have paid, the invoice still shows open, and the queue will send a collector to chase them.'),
  ('PRE_BILLING','Invoice',              'Medium', 'Integrity', CAST(0 AS BIT), 'The invoice is dated before the goods shipped. A negative billing lag is a revenue-recognition question, not a rounding artefact, so it is raised rather than clipped to zero.'),
  ('DUE_DATE_TERMS_MISMATCH','Invoice',  'Medium', 'Ageing',    CAST(0 AS BIT), 'The due date does not equal invoice date + the terms'' net days, so the invoice lands in the wrong ageing bucket.'),
  ('DISCOUNT_WITHOUT_TERMS','Application',   'Medium', 'Balance',   CAST(0 AS BIT), 'An early-payment discount was taken on terms that offer none.'),
@@ -119,17 +123,33 @@ AS RETURN
     WHERE b.OverAppliedAmount > 0.005
 
     UNION ALL
-    SELECT 'RECEIPT_BEFORE_INVOICE', 'Receipt', r.ReceiptNo, a2.InvoiceKey,
-           a2.AppliedAmount,
+    -- ONE ROW PER RECEIPT, because the catalog calls this a Receipt check and
+    -- vw_DQ_Summary divides the row count by the receipt population.
+    --
+    -- Joining receipt -> application -> invoice emits one row per (receipt,
+    -- invoice) pair, so a receipt applied to two later-dated invoices was
+    -- counted twice. Three of them were, publishing 27 defective receipts as
+    -- 30 in the validation report, the case study and the traceability matrix.
+    -- The earliest offending invoice is kept for the message, and AmountAtRisk
+    -- is the receipt's whole applied value rather than one line of it.
+    SELECT 'RECEIPT_BEFORE_INVOICE', 'Receipt', r.ReceiptNo, x.FirstInvoiceKey,
+           x.TotalApplied,
            CONCAT('Receipt banked ', CONVERT(CHAR(10), dp.[Date], 120),
-                  ' but the invoice it settles is dated ', CONVERT(CHAR(10), di.[Date], 120))
+                  ' but the earliest invoice it settles is dated ', CONVERT(CHAR(10), di.[Date], 120))
     FROM dbo.Fact_CashReceipt r
-    JOIN dbo.Fact_CashApplication a2 ON a2.ReceiptKey = r.ReceiptKey
-    JOIN dbo.Fact_Invoice f ON f.InvoiceKey = a2.InvoiceKey
-    JOIN dbo.Dim_Date dp ON dp.DateKey = r.ReceiptDateKey
-    JOIN dbo.Dim_Date di ON di.DateKey = f.InvoiceDateKey
     CROSS JOIN AsOfKey a
-    WHERE r.ReceiptDateKey < f.InvoiceDateKey AND r.ReceiptDateKey <= a.k
+    CROSS APPLY (
+        SELECT FirstInvoiceKey = MIN(f.InvoiceKey),
+               FirstInvoiceDateKey = MIN(f.InvoiceDateKey),
+               TotalApplied = SUM(a2.AppliedAmount),
+               Pairs = COUNT(*)
+        FROM dbo.Fact_CashApplication a2
+        JOIN dbo.Fact_Invoice f ON f.InvoiceKey = a2.InvoiceKey
+        WHERE a2.ReceiptKey = r.ReceiptKey AND r.ReceiptDateKey < f.InvoiceDateKey
+    ) x
+    JOIN dbo.Dim_Date dp ON dp.DateKey = r.ReceiptDateKey
+    JOIN dbo.Dim_Date di ON di.DateKey = x.FirstInvoiceDateKey
+    WHERE x.Pairs > 0 AND r.ReceiptDateKey <= a.k
 
     UNION ALL
     -- Cash cannot be matched to an invoice before it reaches the bank. When it
@@ -258,6 +278,7 @@ CREATE VIEW dbo.vw_DQ_Summary AS
 WITH Pop AS (
     SELECT InvoiceCount     = (SELECT COUNT(*) FROM dbo.Fact_Invoice),
            ReceiptCount     = (SELECT COUNT(*) FROM dbo.Fact_CashReceipt),
+           CustomerCount    = (SELECT COUNT(*) FROM dbo.Dim_Customer),
            ApplicationCount = (SELECT COUNT(*) FROM dbo.Fact_CashApplication)
 ),
 Found AS (
@@ -275,9 +296,22 @@ SELECT
     cat.CountsTowardExposure,
     Anomalies      = ISNULL(f.Anomalies, 0),
     AmountAtRisk   = CAST(ISNULL(f.AmountAtRisk, 0) AS DECIMAL(14,2)),
-    PopulationScanned = CASE cat.EntityType WHEN 'Receipt' THEN p.ReceiptCount WHEN 'Application' THEN p.ApplicationCount ELSE p.InvoiceCount END,
+    -- 'Customer' was missing from this mapping, so UNAPPLIED_CASH_AGED -- whose
+    -- rows are customers -- fell through the ELSE and was rated against the
+    -- invoice count. The ELSE is the dangerous part of a mapping like this: it
+    -- silently sizes an unrecognised population against whatever happens to be
+    -- last, and produces a rate that looks reassuringly small.
+    PopulationScanned = CASE cat.EntityType
+                            WHEN 'Receipt'     THEN p.ReceiptCount
+                            WHEN 'Application' THEN p.ApplicationCount
+                            WHEN 'Customer'    THEN p.CustomerCount
+                            ELSE p.InvoiceCount END,
     AnomalyRatePct = CAST(100.0 * ISNULL(f.Anomalies, 0)
-                     / NULLIF(CASE cat.EntityType WHEN 'Receipt' THEN p.ReceiptCount WHEN 'Application' THEN p.ApplicationCount ELSE p.InvoiceCount END, 0)
+                     / NULLIF(CASE cat.EntityType
+                                  WHEN 'Receipt'     THEN p.ReceiptCount
+                                  WHEN 'Application' THEN p.ApplicationCount
+                                  WHEN 'Customer'    THEN p.CustomerCount
+                                  ELSE p.InvoiceCount END, 0)
                      AS DECIMAL(6,3)),
     cat.WhatItMeans
 FROM dbo.vw_DQ_CheckCatalog cat

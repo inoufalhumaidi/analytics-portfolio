@@ -278,7 +278,11 @@ FROM dbo.fn_SpendKPI('$AsOf')
 $model.Tables.Add($tRep) | Out-Null
 
 $model.SaveChanges() | Out-Null
-Write-Host "  9 tables created"
+# Counted, not asserted. This read "9 tables created" from the day it was
+# written until Ref_Reporting became the tenth and nobody moved the literal --
+# the same trap this script calls out forty lines below for the display-folder
+# count. A hardcoded count of a thing the code builds is a claim that rots.
+Write-Host "  $($model.Tables.Count) tables created"
 
 # -----------------------------------------------------------------------------
 # 4. Refresh  (the first one raises a credential prompt inside Desktop)

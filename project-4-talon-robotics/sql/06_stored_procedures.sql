@@ -2,7 +2,7 @@
 ================================================================================
 Project 4 — Talon Robotics: Payload Deployment Delivery
 Script:  06_stored_procedures.sql
-Purpose: The reusable interface. Seven procedures, every one @AsOf-aware.
+Purpose: The reusable interface. Six procedures, every one @AsOf-aware.
 
 WHY PROCEDURES AND NOT JUST VIEWS
 
@@ -269,5 +269,5 @@ IF OBJECT_ID('dbo.usp_ReadinessTrend','P')     IS NULL SET @missing += 'usp_Read
 IF OBJECT_ID('dbo.usp_RunDataQualityChecks','P') IS NULL SET @missing += 'usp_RunDataQualityChecks ';
 IF @missing <> '' THROW 52062, 'FAILED to create stored procedures -- scroll up for the compile error.', 1;
 
-PRINT 'Stored procedures created and verified: 7 procedures, all @AsOf-aware, all validating their arguments.';
+PRINT 'Stored procedures created and verified: 6 here, all @AsOf-aware and all validating their arguments, plus usp_RunDataQualityChecks from 04 (which is checked above but takes a tolerance, not an as-of date).';
 GO

@@ -286,7 +286,11 @@ $wsQueue.Range($wsQueue.Cells.Item($firstDataRow,6), $wsQueue.Cells.Item($lastDa
 $wsQueue.Range($wsQueue.Cells.Item($firstDataRow,6), $wsQueue.Cells.Item($lastDataRow,9)).NumberFormat = "0.0%"
 
 # Ranked Top-15 display block (columns N-V), built with LARGE/MATCH/INDEX
-$topN = 15
+# 25, not 15. The case study points readers here for "the full list" of the
+# flagged technicians, and a block capped at 15 left ten of them out of the one
+# artefact the sentence promises. The helper table beside it always held all 35;
+# it was only the ranked worklist that was short.
+$topN = 25
 $rankHeaders = @("Rank","TechnicianID","TechnicianName","RegionName","UtilizationPct","FirstTimeFixPct","SLACompliancePct","CallbackPct","RiskScore","RecommendedAction")
 $wsQueue.Cells.Item($headerRow,14) = "TOP $topN PRIORITY QUEUE (highest RiskScore first)"
 $wsQueue.Cells.Item($headerRow,14).Font.Bold = $true
@@ -485,7 +489,7 @@ $rtmData = @(
     @("BR-01","Identify regions/technicians with wasted (underutilized) capacity","UtilizationPct","vw_TechnicianUtilization; KPI_Dashboard","UAT-01: 255/11040 min = 2.31% matches exactly","PASS"),
     @("BR-02","Flag technicians who are over capacity (burnout/SLA risk)","FlagOverCapacity","vw_PriorityActionQueue; Priority_Action_Queue sheet","Manually verified against technicians exceeding 95% util","PASS"),
     @("BR-03","Quantify rework/quality risk","FirstTimeFixPct, CallbackPct","vw_TechnicianKPIMonthly","UAT-02a/02b: 1 of 2 jobs each -> 50.00% exactly","PASS"),
-    @("BR-04","Quantify SLA compliance and its driver (travel/dispatch delay)","SLACompliancePct","vw_RegionKPIMonthly; drill by SLAHours","East Valley 93.1% vs Central 95.6% on 1-hr SLA segment reconciles to raw data","PASS"),
+    @("BR-04","Quantify SLA compliance and its driver (travel/dispatch delay)","SLACompliancePct","vw_RegionKPIMonthly; drill by SLAHours","East Valley 93.2% vs Central 95.3% on 1-hr SLA segment reconciles to raw data","PASS"),
     @("BR-05","Produce a ranked, actionable worklist","RiskScore, RecommendedAction","vw_PriorityActionQueue; ranked Top-15 block","UAT-04: engineered low-utilization tech correctly flagged","PASS"),
     @("BR-06","No confidential/production data used","N/A (governance)","sql/02_generate_synthetic_data.sql header disclosure","Manual review: no real identifiers anywhere","PASS"),
     @("BR-07","Detect data quality problems before they reach the dashboard","vw_DQ_JobAnomalies","sql/03_data_quality_checks.sql; Data_Quality sheet","UAT-03: deliberately broken row caught by TIMESTAMP_INVERSION","PASS"),
@@ -511,7 +515,16 @@ $uatData = @(
     @("UAT-04","Priority queue flags a technician far below utilization target","1","1","PASS"),
     @("UAT-05","Region monthly job count reconciles to underlying fact rows","matches","matches","PASS"),
     @("UAT-06a","Jan-2025 FTF% = 2 of its own 3 jobs, not pooled with Feb (regression test)","66.67","66.67","PASS"),
-    @("UAT-06b","Feb-2025 FTF% = 1 of its own 1 job, not pooled with Jan (regression test)","100.00","100.00","PASS")
+    @("UAT-06b","Feb-2025 FTF% = 1 of its own 1 job, not pooled with Jan (regression test)","100.00","100.00","PASS"),
+    # The four below were added by the two hardening commits and were missing
+    # from this log while it claimed to cover all twelve cases. UAT-07a/07b are
+    # the weekday/weekend regression tests for the defect in validation report
+    # section 5b -- the one artefact a reader would check to confirm that
+    # regression test exists did not list it.
+    @("UAT-07a","Utilization excludes weekend work (75 of 10,080 weekday minutes)","0.74 / 75","0.74 / 75","PASS"),
+    @("UAT-07b","The weekend call-out is reported as overtime, not discarded","120","120","PASS"),
+    @("UAT-08","Procedures raise on an invalid month, an invalid TopN and a reversed range","YES / YES / YES","YES / YES / YES","PASS"),
+    @("UAT-09","Region statuses sum to TotalJobs, and no revenue is booked on uncompleted work","0 / 0","0 / 0","PASS")
 )
 $uatArr = New-Object 'object[,]' $uatData.Count,5
 for ($i=0; $i -lt $uatData.Count; $i++) { for ($c=0; $c -lt 5; $c++) { $uatArr[$i,$c] = $uatData[$i][$c] } }

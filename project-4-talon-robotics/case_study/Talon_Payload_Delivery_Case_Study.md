@@ -180,7 +180,7 @@ Against that policy:
 
 - **110 requirements** pass only at a level below what their type demands — a safety behaviour
   signed off by a unit test.
-- **20 requirements** have passing evidence produced by their own owner, against a policy requiring
+- **46 requirements** (40 of them must-ship) have passing evidence produced by their own owner, against a policy requiring
   an independent witness.
 
 Both look like a pass on every dashboard the programme currently runs. Neither is admissible
@@ -271,7 +271,7 @@ them would inflate the overdue rate with a typing error and blame the programme 
 | **1** | **Do not ship build 88.** | Programme board | 135 of 281 must-ship requirements have no current, admissible evidence. This is not a judgement about risk appetite; it is that the evidence to make that judgement does not exist. |
 | **2** | **Freeze Flight Control and Release Mechanism, or accept that their verification cannot close.** | Chief engineer | At 45 and 42 builds changed, re-running their suites buys evidence the next build invalidates. Freeze the interface, then verify. |
 | **3** | **Treat rig capacity as the schedule driver, not test throughput.** | Programme board | 610 rig hours outstanding against 180 a week. Adding a seventh rig moves the date; adding test engineers does not. |
-| **4** | **Re-witness the 20 self-verified safety requirements this week.** | Quality | Costs a second signature, not rig time. It is the cheapest readiness the programme can buy, and for Regulatory items it is not optional. |
+| **4** | **Re-witness the 3 self-verified requirements that a signature alone would fix.** | Quality | Costs a second signature, not rig time. It is the cheapest readiness the programme can buy, and for Regulatory items it is not optional. |
 | **5** | **Schedule the 110 under-levelled requirements explicitly.** | Test manager | They are currently invisible: they read as passes. Each needs a rig slot it has never been allocated. |
 | **6** | **Report readiness and completion side by side from now on.** | Programme board | Not as a criticism of the existing metric. Reporting only completion is what let a 42-point gap stay invisible for two quarters. |
 | **7** | **Re-baseline the seven RAID items due before they were raised.** | PMO | Trivial to fix, and they are quietly inflating the overdue rate that the board uses to judge the rest of the register. |

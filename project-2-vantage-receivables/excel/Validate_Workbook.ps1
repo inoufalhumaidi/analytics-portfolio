@@ -73,7 +73,7 @@ $sqlFigures = @(
        Sql="SELECT CashCycleDays FROM dbo.fn_DSOBridge('$AsOf')" },
     @{ Sheet='Dashboard'; Cell='B27'; Label='Unapplied cash % of AR'; Published=3.87;        Tol=0.02;
        Sql="SELECT CAST(100.0 * (SELECT SUM(UnappliedCash) FROM dbo.vw_UnappliedCash) / NULLIF((SELECT SUM(OpenBalance) FROM dbo.vw_ARBalance WHERE OpenBalance > 0.005),0) AS DECIMAL(9,2))" },
-    @{ Sheet='Dashboard'; Cell='B29'; Label='Promise kept rate %';    Published=86.29;       Tol=0.01;
+    @{ Sheet='Dashboard'; Cell='B29'; Label='Promise kept rate %';    Published=86.60;       Tol=0.01;
        Sql="SELECT KeptRatePct FROM dbo.fn_PromiseKeptRate('$AsOf', 12)" },
     @{ Sheet='Calc';      Cell='C20'; Label='Countback DSO';          Published=63.07;       Tol=0.01;
        Sql="SELECT DSO_Countback FROM dbo.fn_DSO('$AsOf')" },

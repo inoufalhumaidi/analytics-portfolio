@@ -8,7 +8,7 @@
 #
 # WHAT THIS DOES: builds the star schema (7 tables imported from SQL Server
 # via Power Query/M) + 6 relationships (5 active, 1 deliberately inactive) +
-# 28 DAX measures + a Year > MonthName date hierarchy (see DAX_Measures.md)
+# 31 DAX measures + a Year > MonthName date hierarchy (see DAX_Measures.md)
 # entirely by script.
 #
 # WHAT THIS DOES NOT DO: build report pages/visuals. Power BI's report
@@ -300,8 +300,36 @@ RETURN
     )
 '@
 New-Measure $fact "Available Minutes" $availMinExpr "#,##0" "Utilization"
-New-Measure $fact "Worked Minutes" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobDurationMin] ) + SUM ( Fact_ServiceJobs[TravelTimeMin] ), Fact_ServiceJobs[JobStatus] = "Completed" )' "#,##0" "Utilization"
+# THE WEEKDAY FILTER BELOW IS THE WHOLE OF THE b1447a6 FIX, AND IT WAS MISSING
+# HERE FOR THE ENTIRE LIFE OF THIS MODEL.
+#
+# [Available Minutes] above filters Dim_Date[IsWeekend] = 0, because capacity is
+# modelled on scheduled weekdays. [Worked Minutes] filtered on JobStatus alone,
+# so [Utilization %] divided EVERY completed job -- weekend call-outs included --
+# by weekday-only capacity. That is precisely the defect
+# docs/data_validation_report.md section 5b describes as corrected.
+#
+# It was corrected in SQL, in Excel, in the JSON exports, in the dashboard and
+# in the prose. Nothing under powerbi/ was touched, so the shipped report
+# evaluated to 70.455% portfolio utilization and 50.491% for South Metro while
+# every other artefact in the project said 65.891% and 47.243%. All five regions
+# differed, and two of them sat above a 75% target they do not meet.
+#
+# The lesson is the one the portfolio keeps relearning: a fix applied to "the
+# code" is not applied to the artefacts that re-implement the same definition.
+# Excel was checked because a validator reads it back; the .pbix was not,
+# because verifying it needs Power BI Desktop running and nobody re-ran it.
+New-Measure $fact "Worked Minutes" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobDurationMin] ) + SUM ( Fact_ServiceJobs[TravelTimeMin] ), Fact_ServiceJobs[JobStatus] = "Completed", Dim_Date[IsWeekend] = 0 )' "#,##0" "Utilization"
 New-Measure $fact "Utilization %" "DIVIDE ( [Worked Minutes], [Available Minutes] )" $pct "Utilization"
+
+# Weekend work does not vanish -- it is overtime, and it is reported rather than
+# folded into utilization. vw_TechnicianUtilization makes the same split
+# (WorkedMinutes weekday, OvertimeMinutes weekend, TotalWorkedMinutes their
+# sum), and the model carried no equivalent at all until now, so the figure the
+# fix surfaced had nowhere to be shown.
+New-Measure $fact "Overtime Minutes" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobDurationMin] ) + SUM ( Fact_ServiceJobs[TravelTimeMin] ), Fact_ServiceJobs[JobStatus] = "Completed", Dim_Date[IsWeekend] = 1 )' "#,##0" "Utilization"
+New-Measure $fact "Total Worked Minutes" "[Worked Minutes] + [Overtime Minutes]" "#,##0" "Utilization"
+New-Measure $fact "Overtime % of Capacity" "DIVIDE ( [Overtime Minutes], [Available Minutes] )" $pct "Utilization"
 
 New-Measure $fact "Total Revenue" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobRevenue] ), Fact_ServiceJobs[JobStatus] = "Completed" )' $money "Financial"
 New-Measure $fact "Total Cost" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobCost] ), Fact_ServiceJobs[JobStatus] <> "Rescheduled" )' $money "Financial"
@@ -405,7 +433,7 @@ $model.SaveChanges() | Out-Null
 
 Write-Host ""
 Write-Host "=== BUILD COMPLETE ==="
-Write-Host "7 tables, 6 relationships (5 active), 28 measures. In Power BI Desktop: expand"
+Write-Host "7 tables, 6 relationships (5 active), 31 measures. In Power BI Desktop: expand"
 Write-Host "Fact_ServiceJobs in the Fields pane to find measures grouped into"
 Write-Host "Volume/Quality/Utilization/Financial/Targets/Status/Formatting folders."
 Write-Host "Now: File > Save As to save the .pbix, then follow"

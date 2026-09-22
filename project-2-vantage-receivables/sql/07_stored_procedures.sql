@@ -176,6 +176,20 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- This is the procedure a collector actually opens, and it was the one
+    -- with no argument validation: a typo in either filter returned zero rows
+    -- and exit code 0, which on a worklist reads as "nothing to call today".
+    -- UAT-14's own rationale names that harm -- "a procedure that silently
+    -- falls back to a default answers a question nobody asked, and the caller
+    -- has no way to tell" -- and three of the eight procedures implemented it.
+    IF @CollectorID IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM dbo.Dim_Collector WHERE CollectorID = @CollectorID)
+        THROW 50010, 'No such CollectorID. An empty worklist must not be the answer to a typo.', 1;
+
+    IF @ActionCode IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM dbo.vw_PriorityActionQueue WHERE ActionCode = @ActionCode)
+        THROW 50011, 'No such ActionCode in the current queue. Valid codes are visible in dbo.vw_PriorityActionQueue.', 1;
+
     SELECT
         q.PriorityRank, q.CollectorRank,
         q.CustomerID, q.CustomerName, q.Segment, q.Region, q.RiskTier,

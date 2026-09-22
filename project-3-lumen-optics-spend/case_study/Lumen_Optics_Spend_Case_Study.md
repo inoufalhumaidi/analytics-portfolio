@@ -357,7 +357,7 @@ dataset byte for byte, and UAT-20 asserts the fingerprints.
 | Landed cost (12 months) | $49,474,785.92 |
 | **Annual erosion opportunity** | **$4,047,609** |
 | of which on sole-source parts | $1,470,952 |
-| Value already ahead of the curve (not netted) | −$249,405 |
+| Value already ahead of the curve (not netted) | −$249,429 |
 | Material paid for and unusable | $1,571,168 |
 | Vendor–part pairs assessed | 185 |
 | **Workable this quarter** | **43 (65.6% of the gap)** |

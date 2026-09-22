@@ -99,9 +99,10 @@ clean, and produced plausible numbers.
 **A hard-coded loop bound that suppressed the finding it was built to demonstrate.**
 The wear simulation advanced every component position by one generation per pass, capped at six —
 which looked generous against a 150-hour interval and roughly 560 flight hours per airframe. It is
-wrong for exactly the aircraft this project is about: a mountain airframe burns a rotor set every
-~62 flight hours and needs about nine generations. Generation seven was created and never closed, so
-those parts sat permanently fitted with their life exhausted and **never failed**. The bug quietly
+wrong for exactly the aircraft this project is about: a Highland airframe burns a rotor set every
+~69 flight hours and needs seven generations — one more than the cap allowed. Generation seven was
+created and never closed, so those parts sat permanently fitted with their life exhausted and
+**never failed**. The bug quietly
 argued against the finding. The loop now runs until a pass closes nothing, and a gate asserts no
 fitted component has exhausted stress life — on *both* clocks, because a version checking only the
 physics clock would let stranded scheduled removals through, and that is the direction that flatters

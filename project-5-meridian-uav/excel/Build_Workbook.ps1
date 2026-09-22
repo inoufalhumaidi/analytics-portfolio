@@ -53,6 +53,23 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+
+<#
+A VARIABLE FOLLOWED BY A COLON IS SCOPE NOTATION, NOT TEXT.
+
+    "B$row:D$row"  ->  "B12"          the ":D$row" is silently swallowed
+    "B${row}:D${row}"  ->  "B12:D12"
+
+PowerShell parses `$row:` the same way it parses `$env:PATH` -- as a drive or
+scope qualifier -- so the rest of the range disappears and the expression still
+produces a perfectly valid single-cell reference. Nothing raises. A
+NumberFormat applied this way formats one cell of the intended range; a named
+range built this way covers one cell of the intended block, and a SUM over it
+returns a number that looks plausible.
+
+Every multi-cell range string in this file therefore uses ${...} or $(...).
+#>
+
 <#
 EVERY Value2 ASSIGNMENT IS EXPLICITLY CAST, AND IT HAS TO BE.
 
@@ -316,7 +333,7 @@ in
         $d.Range("C$row").Formula = "=INDEX(tTargets[TargetValue],MATCH(A$row,tTargets[MetricName],0))"
         $d.Range("D$row").Formula = "=INDEX(tTargets[WarningValue],MATCH(A$row,tTargets[MetricName],0))"
         $d.Range("E$row").Formula = "=IF(INDEX(tTargets[Direction],MATCH(A$row,tTargets[MetricName],0))=""HigherBetter"",IF(B$row>=C$row,""Green"",IF(B$row>=D$row,""Amber"",""Red"")),IF(B$row<=C$row,""Green"",IF(B$row<=D$row,""Amber"",""Red"")))"
-        $d.Range("B$row:D$row").NumberFormat = '#,##0.00'
+        $d.Range("B${row}:D${row}").NumberFormat = '#,##0.00'
         $row++
     }
     $lastKpi = $row - 1
@@ -380,7 +397,7 @@ in
         $b.Range("G$row").Formula = "=INDEX(tBase[HiddenOverdue],MATCH(`$A$row,tBase[BaseCode],0))"
         $b.Range("H$row").Formula = "=INDEX(tBase[UnscheduledRatePct],MATCH(`$A$row,tBase[BaseCode],0))"
         $b.Range("C$row").NumberFormat = '0.0000'
-        $b.Range("D$row:F$row").NumberFormat = '0.00'
+        $b.Range("D${row}:F${row}").NumberFormat = '0.00'
         $b.Range("H$row").NumberFormat = '0.00'
     }
     $lastBase = 4 + $loaded['tBase']
@@ -423,8 +440,8 @@ in
         $p.Range("H$row").Formula = "=SUMIFS(tSweep[MedianLeadTimeFlightHours],tSweep[ComponentCode],`$A$row,tSweep[VibThreshold],AlertThreshold)"
         $p.Range("I$row").Formula = "=SUMIFS(tSweep[ActionableLeadTimePct],tSweep[ComponentCode],`$A$row,tSweep[VibThreshold],AlertThreshold)"
         $p.Range("J$row").Formula = "=IF(H$row>=B$row,""yes"",""NO -- the median warning is shorter than the time to get the part"")"
-        $p.Range("B$row:C$row").NumberFormat = '0.00'
-        $p.Range("F$row:I$row").NumberFormat = '0.00'
+        $p.Range("B${row}:C${row}").NumberFormat = '0.00'
+        $p.Range("F${row}:I${row}").NumberFormat = '0.00'
         $row++
     }
     $lastPred = $row - 1
@@ -481,8 +498,8 @@ in
         }
         $q.Range("M$row").Formula = "=INDEX(Calc!`$C`$5:`$C`$$calcLast,MATCH(`$A$row,Calc!`$A`$5:`$A`$$calcLast,0))"
         $q.Range("N$row").Formula = "=IF(M$row<=HangarHoursPerWeek,""yes"",""-"")"
-        $q.Range("G$row:J$row").NumberFormat = '0.00'
-        $q.Range("L$row:M$row").NumberFormat = '0.0'
+        $q.Range("G${row}:J${row}").NumberFormat = '0.00'
+        $q.Range("L${row}:M${row}").NumberFormat = '0.0'
     }
     $lastQ = 4 + $showRows
     $fcQ = $q.Range("N5:N$lastQ").FormatConditions.Add(1, 3, '="yes"')
@@ -536,7 +553,7 @@ in
         # 0.01 absolute, because the SQL side is published rounded to two
         # decimals. Anything bigger than a rounding step is a disagreement.
         $v.Range("E$row").Formula = "=IF(ABS(C$row-D$row)<0.011,""OK"",""MISMATCH"")"
-        $v.Range("C$row:D$row").NumberFormat = '#,##0.00'
+        $v.Range("C${row}:D${row}").NumberFormat = '#,##0.00'
         $row++; $n++
     }
     $lastV = $row - 1
