@@ -137,6 +137,16 @@ def prepare() -> tuple[pd.DataFrame, pd.DataFrame]:
     lives = data_access.load("component_life")
     types = data_access.load("component_type")
 
+    # ROW ORDER IS FIXED HERE, because the result depends on it. The classifier's
+    # early-stopping holdout is carved from the rows in the order they arrive, so
+    # the same data in a different order trains a different model: the extract
+    # (written ORDER BY ComponentSerial) gave 93.33% actionable where SQL gave the
+    # published 91.11% -- and SQL promises no order at all without ORDER BY, so a
+    # rebuilt database could have moved the headline. Sorting on the reading's
+    # own key makes the order a property of the data, not of the source. SQL
+    # Server already returned this order, so the published figures do not move.
+    readings = readings.sort_values(["InstallKey", "SortieSeq"], kind="mergesort").reset_index(drop=True)
+
     lead = dict(zip(types["ComponentCode"], types["LeadTimeFlightHours"].astype(float)))
 
     for col in NUMERIC:

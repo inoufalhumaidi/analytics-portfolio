@@ -195,10 +195,17 @@ passes at **0.000% against a 3.000% tolerance**.
 
 **Without SQL Server**, `python/data_access.py` falls back to `data_exports/` and prints that it did.
 The model, the app and the workbook all run from the extracts alone. The app, the workbook and the
-alarm reconciliation reproduce exactly. The model reproduces every finding but not every decimal:
-the extract rounds sensor features to two or three decimals (see `Export_Extracts.ps1`), while the
+alarm reconciliation reproduce exactly. The model reproduces every finding but not every decimal.
+The extract rounds sensor features to two or three decimals (see `Export_Extracts.ps1`), while the
 published figures were fitted on full precision from SQL Server. For example, the telemetry model's
-actionable lead time is 93.33% from the extracts against the published 91.11%.
+actionable lead time is 92.22% from the extracts against the published 91.11%, with the same 75.63%
+precision.
+
+The model also sorts its readings by `InstallKey, SortieSeq` before training. Its early-stopping
+holdout is carved from the rows in arrival order, so the same data in another order trains a
+different model. Without the sort, the extract's order alone moved that figure to 93.33%. SQL
+Server returns no guaranteed order without `ORDER BY`, so a rebuilt database could have shifted
+the published headline. It already returned this order, so no published figure changed.
 
 ---
 
