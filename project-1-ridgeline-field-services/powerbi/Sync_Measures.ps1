@@ -66,7 +66,7 @@ $ErrorActionPreference = "Stop"
 # -----------------------------------------------------------------------------
 $buildScript = Join-Path $PSScriptRoot "Build_PowerBI_Model.ps1"
 # -Encoding UTF8 is not optional: Windows PowerShell 5.1 reads a file without a
-# BOM as Windows-1252, which turns a UTF-8 non-breaking space into "Â" + space.
+# BOM as Windows-1252, which turns a UTF-8 non-breaking space into two wrong characters.
 $text = Get-Content $buildScript -Raw -Encoding UTF8
 $begin = $text.IndexOf("# ---- MEASURES BEGIN")
 $end = $text.IndexOf("# ---- MEASURES END")
