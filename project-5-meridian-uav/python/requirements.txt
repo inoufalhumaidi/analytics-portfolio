@@ -12,7 +12,9 @@ pandas>=2.2
 numpy>=1.26
 scikit-learn>=1.4
 matplotlib>=3.8
-streamlit>=1.30
+# 1.49, not 1.30: streamlit/app.py passes st.dataframe(width="stretch"), which
+# every release from 1.30 to 1.48 rejects with a TypeError on the first screen.
+streamlit>=1.49
 
 # pyodbc is OPTIONAL. Without it, and without SQL Server, everything still runs
 # from the CSV extracts in data_exports/ -- data_access.py falls back and says
