@@ -28,7 +28,7 @@ Every project follows the same standard:
 
 - **Star schema** in SQL Server with a synthetic-data generator (~37,000 dispatched jobs over two years), data-quality views, KPI views, stored procedures and a 12-assertion UAT suite that runs in a rolled-back transaction and exits non-zero on failure.
 - **Excel operational control** built directly from the database by script, with its KPIs implemented independently of SQL and cross-checked against it.
-- **Power BI report** whose data model is scripted (7 tables, 28 DAX measures) and reconciled figure-by-figure against SQL.
+- **Power BI report** whose data model is scripted (7 tables, 31 DAX measures) and reconciled figure-by-figure against SQL.
 - **Case study** (PDF) with findings and management recommendations.
 
 The validation report records the real bugs that cross-checking caught along the way, including a KPI view that silently pooled months and a regional utilization figure that would have been understated about fivefold. See [`docs/data_validation_report.md`](project-1-ridgeline-field-services/docs/data_validation_report.md).

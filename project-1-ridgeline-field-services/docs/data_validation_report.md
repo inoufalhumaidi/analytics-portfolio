@@ -203,10 +203,36 @@ FTF 86.905%, SLA 98.303%, revenue $21,149,184.67.
 > work the fix surfaces has somewhere to be reported, matching `vw_TechnicianUtilization`. The
 > model is **31 measures**, not 28.
 >
-> **`powerbi/Ridgeline_KPI_Dashboard.pbix` has not been rebuilt and is still stale.** Rebuilding it
-> requires Power BI Desktop open on a blank report and a re-run of the script; nothing in this
-> repository can do it unattended, which is exactly why the defect survived a fix that touched every
-> other artefact. Until that is done, treat the `.pbix` utilization figures as pre-§5b. Three defects sat in the report layer rather than the data:
+> **Fixed 2026-09-27: `powerbi/Ridgeline_KPI_Dashboard.pbix` now evaluates to 65.891% overall and
+> 47.243% for South Metro.** It was patched rather than rebuilt. A rebuild from a blank report
+> produces only the data model, so saving it over this file would have discarded the three report
+> pages reviewed below.
+>
+> 1. The script was run against a blank report to produce a reference model: 7 tables, 37,404 fact
+>    rows, 31 measures.
+> 2. The shipped file's model was diffed against the reference. Tables, columns, Power Query
+>    sources, relationships and the hierarchy were identical. Only the four measures above differed.
+> 3. Those four definitions were copied across. `[Worked Minutes]` was edited in place, so the
+>    visuals bound to it survive.
+> 4. The saved file was reopened from disk and re-verified:
+>    - 31 measures;
+>    - 2,327 of 2,327 values equal to the reference, at total, region, technician, month and
+>      weekday/weekend grain;
+>    - every region's utilization and overtime equal to `vw_TechnicianUtilization`;
+>    - `[Worked Minutes] + [Overtime Minutes]` equal to the old `[Worked Minutes]` (5,301,014),
+>      proving the weekend work was moved, not lost;
+>    - all three pages rendering with no visual errors.
+>
+> **Open, latent (not visible in the shipped report):** `Dim_Date[IsWeekend] = 0` inside
+> `CALCULATE` *replaces* any outer filter on that column rather than intersecting with it. Under a
+> weekends-only slicer, `[Worked Minutes]` would therefore still return the weekday total
+> (4,957,633), and `[Total Worked Minutes]` would return 5,301,014 instead of 343,381. No visual,
+> slicer or filter in the report uses `IsWeekend`, so no figure shown is affected. Wrapping the
+> filter in `KEEPFILTERS ( ... )` would fix it. The same replace-not-intersect pattern applies to
+> `JobStatus = "Completed"` in about ten other measures, so it is a model-wide design decision
+> rather than a one-measure patch.
+
+Three defects sat in the report layer rather than the data:
 
 | # | Defect | Evidence | Fix |
 |---|---|---|---|
