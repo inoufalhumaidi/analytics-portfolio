@@ -223,14 +223,44 @@ FTF 86.905%, SLA 98.303%, revenue $21,149,184.67.
 >      proving the weekend work was moved, not lost;
 >    - all three pages rendering with no visual errors.
 >
-> **Open, latent (not visible in the shipped report):** `Dim_Date[IsWeekend] = 0` inside
-> `CALCULATE` *replaces* any outer filter on that column rather than intersecting with it. Under a
-> weekends-only slicer, `[Worked Minutes]` would therefore still return the weekday total
-> (4,957,633), and `[Total Worked Minutes]` would return 5,301,014 instead of 343,381. No visual,
-> slicer or filter in the report uses `IsWeekend`, so no figure shown is affected. Wrapping the
-> filter in `KEEPFILTERS ( ... )` would fix it. The same replace-not-intersect pattern applies to
-> `JobStatus = "Completed"` in about ten other measures, so it is a model-wide design decision
-> rather than a one-measure patch.
+> **Fixed 2026-09-27: filters inside measures now intersect with the report's selection.** A filter
+> such as `Dim_Date[IsWeekend] = 0` inside `CALCULATE` *replaces* any filter the report already has
+> on that column instead of intersecting with it. Under a weekends-only slicer, `[Worked Minutes]`
+> therefore returned the weekday total (4,957,633), and `[Total Worked Minutes]` returned 5,301,014
+> instead of 343,381. `JobStatus` behaved the same way: filtered to *Cancelled*,
+> `[Completion Rate %]` read 1,822.6%. All nine measures that filter `JobStatus` or `IsWeekend` now
+> wrap the filter in `KEEPFILTERS`.
+>
+> An independent review of that change found two consequences, and both are fixed:
+> - **A false alarm under a status filter.** Utilization is defined on completed work, so filtered
+>   to *Cancelled* it became BLANK. DAX compares BLANK as 0, so every technician read
+>   "Underutilized", turned red and gained a `[Risk Score]` point. `Utilization Status`,
+>   `Utilization Color` and `Risk Score` now return BLANK when a filter placed on `JobStatus`
+>   excludes *Completed*. The test is `ISFILTERED` plus `FILTERS`, so it never hides real idleness:
+>   all 706 technician-days with capacity and no completed work still read "Underutilized".
+> - **Thresholds that could move.** A plain `MetricName` filter only overrode filters on that one
+>   column. The five thresholds now clear every filter on `Ref_KPITargets` with `REMOVEFILTERS` and
+>   then pick their own row, so no selection can blank one.
+>
+> Verified on the saved file, reopened from disk:
+> - All 5,890 measure values at the total, region, technician, month and month × region levels are
+>   unchanged. The report filters on none of `JobStatus`, `IsWeekend` or `Ref_KPITargets`.
+> - Each measure that filters `JobStatus` or `IsWeekend` now sums, across that breakdown, to its
+>   total. Before, each row repeated the total. Capacity is not split by job status, so
+>   `[Available Minutes]` rightly repeats.
+> - Per-status jobs, cost and revenue equal SQL Server's.
+> - Filtered to *Cancelled*, 0 of 35 technicians are flagged; before the guard, every one was.
+> - All three pages render with no visual errors.
+>
+> **A second drift was found and fixed with it.** `powerbi/DAX_Measures.md` still showed the
+> defective `[Worked Minutes]` and was missing five of the 31 measures. `powerbi/Sync_Measures.ps1`
+> now compares the script, that document and the open `.pbix`. It fails on any missing, extra or
+> differing measure, and on any code block in the document it cannot read. Two review rounds
+> turned up blind spots in it: whitespace inside strings, case-only renames, code blocks written
+> in less common Markdown forms, measures on other tables, and extra measures in the model. All
+> are closed. 78 mutated copies of the document and 12 model scenarios each get the right
+> verdict, and extras and renames were also tested on the real engine. Against the pre-change
+> script, the old document shows the 6 drifts described above.
 
 Three defects sat in the report layer rather than the data:
 

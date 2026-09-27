@@ -271,16 +271,38 @@ Write-Host "Dim_Date: MonthName sorted by Month; '$hierName' (Year > MonthName) 
 #    see DAX_Measures.md for the annotated version of each formula)
 # -----------------------------------------------------------------------------
 $fact = $model.Tables["Fact_ServiceJobs"]
+
+# ---- MEASURES BEGIN -- Sync_Measures.ps1 reads every definition between these
+# ---- two markers, so the .pbix and DAX_Measures.md can be checked against them.
 $pct = "0.0%"; $money = "$#,##0"
 
+# EVERY FILTER ON A COLUMN THE REPORT CAN ALSO FILTER IS WRAPPED IN KEEPFILTERS.
+#
+# A plain filter argument such as Fact_ServiceJobs[JobStatus] = "Completed"
+# REPLACES whatever filter the report already has on that column -- it does not
+# intersect with it. With a slicer on "Cancelled", [Completed Jobs] ignored the
+# slicer and returned every completed job, [Completion Rate %] divided that by
+# the cancelled count and went past 100%, and under a weekends-only filter
+# [Worked Minutes] returned the WEEKDAY total. KEEPFILTERS intersects instead, so
+# each measure answers for the rows actually selected: completed jobs among the
+# cancelled ones is none.
+#
+# No page of the shipped report filters JobStatus or IsWeekend, so no figure it
+# shows moved -- checked value by value when the fix was applied.
+#
+# Two consequences are handled where they arise. The Target measures clear every
+# filter on Ref_KPITargets (REMOVEFILTERS) and then pick their own row, so a
+# threshold stays fixed whatever the report has selected. And the utilization
+# status, colour and risk measures return BLANK when the JobStatus selection
+# excludes Completed -- see the note above [Utilization Status].
 New-Measure $fact "Total Jobs" "COUNTROWS ( Fact_ServiceJobs )" "#,##0" "Volume"
-New-Measure $fact "Completed Jobs" 'CALCULATE ( [Total Jobs], Fact_ServiceJobs[JobStatus] = "Completed" )' "#,##0" "Volume"
-New-Measure $fact "Cancelled Jobs" 'CALCULATE ( [Total Jobs], Fact_ServiceJobs[JobStatus] = "Cancelled" )' "#,##0" "Volume"
+New-Measure $fact "Completed Jobs" 'CALCULATE ( [Total Jobs], KEEPFILTERS ( Fact_ServiceJobs[JobStatus] = "Completed" ) )' "#,##0" "Volume"
+New-Measure $fact "Cancelled Jobs" 'CALCULATE ( [Total Jobs], KEEPFILTERS ( Fact_ServiceJobs[JobStatus] = "Cancelled" ) )' "#,##0" "Volume"
 New-Measure $fact "Completion Rate %" "DIVIDE ( [Completed Jobs], [Total Jobs] )" $pct "Volume"
 
-New-Measure $fact "First-Time-Fix %" 'CALCULATE ( AVERAGE ( Fact_ServiceJobs[FirstTimeFix] ), Fact_ServiceJobs[JobStatus] = "Completed" )' $pct "Quality"
-New-Measure $fact "Callback %" 'CALCULATE ( AVERAGE ( Fact_ServiceJobs[CallbackFlag] ), Fact_ServiceJobs[JobStatus] = "Completed" )' $pct "Quality"
-New-Measure $fact "SLA Compliance %" 'CALCULATE ( AVERAGE ( Fact_ServiceJobs[SLAMet] ), Fact_ServiceJobs[JobStatus] = "Completed" )' $pct "Quality"
+New-Measure $fact "First-Time-Fix %" 'CALCULATE ( AVERAGE ( Fact_ServiceJobs[FirstTimeFix] ), KEEPFILTERS ( Fact_ServiceJobs[JobStatus] = "Completed" ) )' $pct "Quality"
+New-Measure $fact "Callback %" 'CALCULATE ( AVERAGE ( Fact_ServiceJobs[CallbackFlag] ), KEEPFILTERS ( Fact_ServiceJobs[JobStatus] = "Completed" ) )' $pct "Quality"
+New-Measure $fact "SLA Compliance %" 'CALCULATE ( AVERAGE ( Fact_ServiceJobs[SLAMet] ), KEEPFILTERS ( Fact_ServiceJobs[JobStatus] = "Completed" ) )' $pct "Quality"
 
 # NOTE: RELATED() cannot be used here. CROSSJOIN(VALUES(...), VALUES(...)) builds a
 # virtual two-column table that has no relationship to Dim_Technician, so
@@ -319,7 +341,7 @@ New-Measure $fact "Available Minutes" $availMinExpr "#,##0" "Utilization"
 # code" is not applied to the artefacts that re-implement the same definition.
 # Excel was checked because a validator reads it back; the .pbix was not,
 # because verifying it needs Power BI Desktop running and nobody re-ran it.
-New-Measure $fact "Worked Minutes" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobDurationMin] ) + SUM ( Fact_ServiceJobs[TravelTimeMin] ), Fact_ServiceJobs[JobStatus] = "Completed", Dim_Date[IsWeekend] = 0 )' "#,##0" "Utilization"
+New-Measure $fact "Worked Minutes" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobDurationMin] ) + SUM ( Fact_ServiceJobs[TravelTimeMin] ), KEEPFILTERS ( Fact_ServiceJobs[JobStatus] = "Completed" ), KEEPFILTERS ( Dim_Date[IsWeekend] = 0 ) )' "#,##0" "Utilization"
 New-Measure $fact "Utilization %" "DIVIDE ( [Worked Minutes], [Available Minutes] )" $pct "Utilization"
 
 # Weekend work does not vanish -- it is overtime, and it is reported rather than
@@ -327,21 +349,29 @@ New-Measure $fact "Utilization %" "DIVIDE ( [Worked Minutes], [Available Minutes
 # (WorkedMinutes weekday, OvertimeMinutes weekend, TotalWorkedMinutes their
 # sum), and the model carried no equivalent at all until now, so the figure the
 # fix surfaced had nowhere to be shown.
-New-Measure $fact "Overtime Minutes" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobDurationMin] ) + SUM ( Fact_ServiceJobs[TravelTimeMin] ), Fact_ServiceJobs[JobStatus] = "Completed", Dim_Date[IsWeekend] = 1 )' "#,##0" "Utilization"
+New-Measure $fact "Overtime Minutes" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobDurationMin] ) + SUM ( Fact_ServiceJobs[TravelTimeMin] ), KEEPFILTERS ( Fact_ServiceJobs[JobStatus] = "Completed" ), KEEPFILTERS ( Dim_Date[IsWeekend] = 1 ) )' "#,##0" "Utilization"
 New-Measure $fact "Total Worked Minutes" "[Worked Minutes] + [Overtime Minutes]" "#,##0" "Utilization"
 New-Measure $fact "Overtime % of Capacity" "DIVIDE ( [Overtime Minutes], [Available Minutes] )" $pct "Utilization"
 
-New-Measure $fact "Total Revenue" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobRevenue] ), Fact_ServiceJobs[JobStatus] = "Completed" )' $money "Financial"
-New-Measure $fact "Total Cost" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobCost] ), Fact_ServiceJobs[JobStatus] <> "Rescheduled" )' $money "Financial"
+New-Measure $fact "Total Revenue" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobRevenue] ), KEEPFILTERS ( Fact_ServiceJobs[JobStatus] = "Completed" ) )' $money "Financial"
+New-Measure $fact "Total Cost" 'CALCULATE ( SUM ( Fact_ServiceJobs[JobCost] ), KEEPFILTERS ( Fact_ServiceJobs[JobStatus] <> "Rescheduled" ) )' $money "Financial"
 New-Measure $fact "Gross Margin" "[Total Revenue] - [Total Cost]" $money "Financial"
 New-Measure $fact "Revenue per Completed Job" "DIVIDE ( [Total Revenue], [Completed Jobs] )" $money "Financial"
 
-New-Measure $fact "Util Warning Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), Ref_KPITargets[MetricName] = "UtilizationPct" )' "0.0" "Targets"
-New-Measure $fact "FTF Warning Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), Ref_KPITargets[MetricName] = "FirstTimeFixPct" )' "0.0" "Targets"
-New-Measure $fact "SLA Warning Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), Ref_KPITargets[MetricName] = "SLACompliancePct" )' "0.0" "Targets"
-New-Measure $fact "Callback Warning Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), Ref_KPITargets[MetricName] = "CallbackPct" )' "0.0" "Targets"
-New-Measure $fact "Util Ceiling Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), Ref_KPITargets[MetricName] = "UtilizationCeilingPct" )' "0.0" "Targets"
+New-Measure $fact "Util Warning Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), REMOVEFILTERS ( Ref_KPITargets ), Ref_KPITargets[MetricName] = "UtilizationPct" )' "0.0" "Targets"
+New-Measure $fact "FTF Warning Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), REMOVEFILTERS ( Ref_KPITargets ), Ref_KPITargets[MetricName] = "FirstTimeFixPct" )' "0.0" "Targets"
+New-Measure $fact "SLA Warning Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), REMOVEFILTERS ( Ref_KPITargets ), Ref_KPITargets[MetricName] = "SLACompliancePct" )' "0.0" "Targets"
+New-Measure $fact "Callback Warning Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), REMOVEFILTERS ( Ref_KPITargets ), Ref_KPITargets[MetricName] = "CallbackPct" )' "0.0" "Targets"
+New-Measure $fact "Util Ceiling Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[WarningValue] ), REMOVEFILTERS ( Ref_KPITargets ), Ref_KPITargets[MetricName] = "UtilizationCeilingPct" )' "0.0" "Targets"
 
+# NOTE on CompletedInScope below. Utilization is defined on COMPLETED work, so
+# with the report filtered to, say, Cancelled jobs it is not zero -- it does not
+# apply. KEEPFILTERS makes [Utilization %] BLANK there, and without this guard
+# BLANK compared as 0: every technician read "Underutilized", turned red and
+# gained a Risk Score point. ISFILTERED + FILTERS look only at a filter placed on
+# JobStatus itself, so a technician whose only jobs in a month were cancelled is
+# NOT caught by it and still, correctly, reads Underutilized.
+#
 # NOTE on the blank guards below: a technician with no capacity in the current
 # context (Inactive, or a month before their HireDate) yields BLANK utilization,
 # and in DAX BLANK compares as 0 -- so every "below target" test fired and those
@@ -350,9 +380,12 @@ New-Measure $fact "Util Ceiling Threshold" 'CALCULATE ( VALUES ( Ref_KPITargets[
 $utilStatusExpr = @'
 VAR Avail = [Available Minutes]
 VAR U = [Utilization %] * 100
+VAR CompletedInScope =
+    NOT ISFILTERED ( Fact_ServiceJobs[JobStatus] )
+        || "Completed" IN FILTERS ( Fact_ServiceJobs[JobStatus] )
 RETURN
     IF (
-        ISBLANK ( Avail ) || Avail = 0,
+        ISBLANK ( Avail ) || Avail = 0 || NOT CompletedInScope,
         BLANK (),
         SWITCH (
             TRUE(),
@@ -370,6 +403,9 @@ VAR UtilPct = [Utilization %] * 100
 VAR FTFPct  = [First-Time-Fix %] * 100
 VAR SLAPct  = [SLA Compliance %] * 100
 VAR CBPct   = [Callback %] * 100
+VAR CompletedInScope =
+    NOT ISFILTERED ( Fact_ServiceJobs[JobStatus] )
+        || "Completed" IN FILTERS ( Fact_ServiceJobs[JobStatus] )
 VAR Score =
     IF ( UtilPct < [Util Warning Threshold], 1, 0 )
         + IF ( UtilPct > [Util Ceiling Threshold], 1, 0 )
@@ -377,7 +413,7 @@ VAR Score =
         + IF ( NOT ISBLANK ( SLAPct ) && SLAPct < [SLA Warning Threshold], 1, 0 )
         + IF ( NOT ISBLANK ( CBPct ) && CBPct > [Callback Warning Threshold], 1, 0 )
 RETURN
-    IF ( ISBLANK ( Avail ) || Avail = 0, BLANK (), Score )
+    IF ( ISBLANK ( Avail ) || Avail = 0 || NOT CompletedInScope, BLANK (), Score )
 '@
 New-Measure $fact "Risk Score" $riskExpr "0" "Status"
 
@@ -403,9 +439,12 @@ RETURN IF ( ISBLANK ( V ), BLANK (), IF ( V > [Callback Warning Threshold], "Abo
 New-Measure $fact "Utilization Color" @'
 VAR Avail = [Available Minutes]
 VAR U = [Utilization %] * 100
+VAR CompletedInScope =
+    NOT ISFILTERED ( Fact_ServiceJobs[JobStatus] )
+        || "Completed" IN FILTERS ( Fact_ServiceJobs[JobStatus] )
 RETURN
     IF (
-        ISBLANK ( Avail ) || Avail = 0,
+        ISBLANK ( Avail ) || Avail = 0 || NOT CompletedInScope,
         BLANK (),
         SWITCH (
             TRUE (),
@@ -427,6 +466,7 @@ New-Measure $fact "Callback Color" @'
 VAR V = [Callback %] * 100
 RETURN IF ( NOT ISBLANK ( V ) && V > [Callback Warning Threshold], "#D03B3B" )
 '@ $null "Formatting"
+# ---- MEASURES END
 
 Write-Host "Saving measures..."
 $model.SaveChanges() | Out-Null
