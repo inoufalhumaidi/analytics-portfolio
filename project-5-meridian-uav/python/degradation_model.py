@@ -179,11 +179,17 @@ def prepare() -> tuple[pd.DataFrame, pd.DataFrame]:
         lives["ComponentCode"].isin(["ROTOR-ASSY", "MOTOR-ESC"])
         & lives["RemovalReason"].isin(["Failure", "Scheduled"])
     ].copy()
-    if "IsDateValid" in lives.columns:
-        invalid = int((lives["IsDateValid"].astype(int) == 0).sum())
-        lives = lives[lives["IsDateValid"].astype(int) == 1]
-        if invalid:
-            print(f"  {invalid} lives excluded: removed before installed, so the life has no length.")
+    # REQUIRED, not optional. This read `if "IsDateValid" in lives.columns:`, and
+    # the CSV extract did not carry the column -- so without SQL Server the filter
+    # was silently skipped, 5 invalid lives were scored, and the reconciliation
+    # with T-SQL below failed. A column the logic depends on is not optional.
+    if "IsDateValid" not in lives.columns:
+        raise KeyError("component_life has no IsDateValid column -- re-run "
+                       "data_exports/Export_Extracts.ps1 to refresh the extract.")
+    invalid = int((lives["IsDateValid"].astype(int) == 0).sum())
+    lives = lives[lives["IsDateValid"].astype(int) == 1]
+    if invalid:
+        print(f"  {invalid} lives excluded: removed before installed, so the life has no length.")
     lives["RemovedDate"] = pd.to_datetime(lives["RemovedDate"])
     lives["IsFailure"] = lives["IsFailure"].astype(int)
     lives["LeadTimeRequired"] = lives["ComponentCode"].map(lead).astype(float)

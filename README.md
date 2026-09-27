@@ -93,4 +93,6 @@ Start with the project [README](project-4-talon-robotics/README.md) for the repr
 
 An adversarial multi-agent review of the SQL raised 51 findings — and **49 of its 55 verification agents died on a session quota**, so the run reported 50 as "refuted" when they had simply never been checked. *Unverified is not refuted.* Re-verified by hand, ten were real, including a population filtered on a today-attribute that froze an eighteen-month trend's denominator at 28, component windows that charged **1,144 sorties to two components at once**, and a feature view with no window predicate that fed **362 orphan readings** to the model. One review finding turned out to be my own misreading, and that is recorded too. See [`docs/data_validation_report.md`](project-5-meridian-uav/docs/data_validation_report.md).
 
-Start with the project [README](project-5-meridian-uav/README.md) for the reproduction steps.
+**Try it live: [meridian-uav-maintenance.streamlit.app](https://meridian-uav-maintenance.streamlit.app/)**, the Streamlit app, running in the
+browser with nothing to install. Or start with the project [README](project-5-meridian-uav/README.md)
+for the reproduction steps.

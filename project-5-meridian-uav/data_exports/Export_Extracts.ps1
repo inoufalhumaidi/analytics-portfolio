@@ -296,6 +296,10 @@ SELECT InstallKey, ComponentSerial, ComponentCode, ComponentName, Criticality, L
        IntervalFlightHours, IntervalStressHours, WeibullShape,
        PctOfHourInterval, PctOfStressInterval,
        CAST(IsFailure AS INT) AS IsFailure, CAST(IsCensored AS INT) AS IsCensored,
+       -- IsDateValid was missing, so the model -- which drops lives removed before
+       -- they were installed -- kept 5 of them when it ran from this file, and its
+       -- pandas/T-SQL reconciliation failed without SQL Server (739 vs 734 lives).
+       CAST(IsDateValid AS INT) AS IsDateValid,
        EventType, DowntimeHours
 FROM dbo.vw_ComponentLifeHistory ORDER BY ComponentSerial;
 "@

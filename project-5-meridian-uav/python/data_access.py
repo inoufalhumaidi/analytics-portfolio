@@ -27,7 +27,9 @@ DATA DISCLOSURE
 
 from __future__ import annotations
 
+import re
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
@@ -106,7 +108,11 @@ SOURCES: dict[str, tuple[str, str]] = {
     ),
 }
 
-_connection_state: dict[str, object] = {"checked": False, "available": False, "reason": ""}
+# "reason" is the full technical cause, for the log. "summary" is the same fact
+# in words a viewer of the app can read -- see describe_source().
+_connection_state: dict[str, object] = {
+    "checked": False, "available": False, "reason": "", "summary": "",
+}
 
 
 def _try_connect():
@@ -115,17 +121,40 @@ def _try_connect():
         return _connection_state["available"]
 
     _connection_state["checked"] = True
+    available = _probe()
+    if not available:
+        # The one place the FULL technical reason is printed. load() repeats a
+        # short form per dataset and describe_source() gives it in plain words.
+        print(f"  SQL Server not used: {_connection_state['reason']}")
+    return available
+
+
+def _probe():
     try:
         import pyodbc
     except ImportError as exc:
-        _connection_state["reason"] = f"pyodbc not installed ({exc})"
+        # ImportError covers two different causes: the package is absent, or it
+        # is present but its native ODBC library is not (libodbc.so.2 on Linux,
+        # which the pyodbc wheel does not bundle). "Not installed" was only ever
+        # true of the first, so the log says what is actually known.
+        _connection_state["reason"] = f"pyodbc could not be imported ({exc})"
+        _connection_state["summary"] = "no SQL Server client in this environment"
         return False
 
-    # Newest driver first. An older driver still works; it is only the
-    # connection string that differs.
+    # Newest driver first: "ODBC Driver N for SQL Server" by N descending, then
+    # Native Client, then the legacy "SQL Server" driver. This comment used to
+    # claim that order over a plain reverse-alphabetical sort, which picked the
+    # legacy driver ahead of Driver 18 -- and the legacy driver returns DATE
+    # columns as text where the current ones return dates.
+    def rank(name: str):
+        match = re.fullmatch(r"ODBC Driver (\d+) for SQL Server", name)
+        if match:
+            return (0, -int(match.group(1)), name)
+        return (1 if "Native Client" in name else 2, 0, name)
+
     drivers = [d for d in pyodbc.drivers() if "SQL Server" in d]
-    preferred = sorted(drivers, reverse=True)
-    for driver in preferred:
+    failures = []
+    for driver in sorted(drivers, key=rank):
         try:
             conn = pyodbc.connect(
                 f"DRIVER={{{driver}}};SERVER={SERVER};DATABASE={DATABASE};"
@@ -137,10 +166,21 @@ def _try_connect():
             _connection_state["driver"] = driver
             return True
         except Exception as exc:  # noqa: BLE001 - any driver failure is the same to us
-            _connection_state["reason"] = f"{driver}: {exc}"
+            failures.append(f"{driver}: {exc}")
+            _connection_state["reason"] = " | ".join(failures)   # every driver's, not the last
+            # Neutral on purpose: this branch also catches a server that answered
+            # and refused the login or the database (e.g. sql/01 not yet run), so
+            # "not reachable" would send the reader to debug the network.
+            _connection_state["summary"] = f"could not connect to SQL Server {SERVER}/{DATABASE}"
     if not drivers:
         _connection_state["reason"] = "no ODBC driver for SQL Server is installed"
+        _connection_state["summary"] = "no SQL Server client in this environment"
     return False
+
+
+def sql_available() -> bool:
+    """True when SQL Server answered. Probed once per process, then cached."""
+    return bool(_try_connect())
 
 
 def load(name: str, *, force_csv: bool = False) -> pd.DataFrame:
@@ -178,6 +218,16 @@ def load(name: str, *, force_csv: bool = False) -> pd.DataFrame:
         finally:
             conn.close()
         frame = pd.DataFrame.from_records(rows, columns=columns)
+        # SQL DECIMAL columns arrive as decimal.Decimal objects in an object
+        # column, while the extract gives float64. Handed to the app as they
+        # were, Altair could not infer a type for them and drew every measure on
+        # a CATEGORICAL axis in SQL mode -- bar heights stopped encoding values,
+        # and only on a machine with a database. Converting here gives the app
+        # the same types from either source; validate_app.py asserts it.
+        for column in frame.columns:
+            present = frame[column].dropna()
+            if len(present) and all(isinstance(v, Decimal) for v in present):
+                frame[column] = frame[column].astype(float)
         print(f"  {name:<20} {len(frame):>7,} rows   from SQL Server")
         return frame
 
@@ -205,11 +255,24 @@ def load(name: str, *, force_csv: bool = False) -> pd.DataFrame:
 
 
 def describe_source() -> str:
+    """
+    One line naming the source, for the app's sidebar and the model's report.
+
+    It names the source by its path WITHIN THE REPOSITORY and gives the reason
+    in plain words. It used to print the absolute path and the raw exception,
+    and the app shows this line to every viewer: on Streamlit Community Cloud
+    that read "CSV extracts in /mount/src/analytics-portfolio/... (SQL
+    unavailable: pyodbc not installed (No module named 'pyodbc'))" -- a server
+    mount path and a Python error, which reads as a malfunction rather than a
+    disclosure. The fallback is still announced, and the full technical reason
+    is printed once, when the fallback is decided, for whoever reads the log.
+    """
     if not _connection_state["checked"]:
         _try_connect()
     if _connection_state["available"]:
         return f"SQL Server {SERVER}/{DATABASE} via {_connection_state['driver']}"
-    return f"CSV extracts in {EXPORT_DIR} (SQL unavailable: {_connection_state['reason']})"
+    where = EXPORT_DIR.relative_to(PROJECT_ROOT.parent).as_posix()
+    return f"CSV extracts in {where} ({_connection_state['summary']})"
 
 
 if __name__ == "__main__":
