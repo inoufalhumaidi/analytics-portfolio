@@ -43,17 +43,19 @@ happens once per Desktop session, and again after the tables are dropped and rec
 powershell powerbi/Validate_PowerBI_Model.ps1
 ```
 
-Expect **28 of 28 checks reconcile**.
+Expect **29 of 29 checks reconcile**.
 
 Do not skip this and do not substitute a glance at the field list. `Build_PowerBI_Model.ps1` reports
 complete success against a model that loaded zero rows — creating tables and measures never touches
 the data, and a Desktop refresh does not populate `EstimatedRowCount`.
 
-Three of those checks go past the totals deliberately:
+Four of those checks go past the totals deliberately:
 
 - the five verification states must **partition** the 519 requirements;
 - `[Stale by Code] + [Stale by Requirement]` must equal `[Stale]`, so the buckets are exclusive;
-- readiness is reconciled for **all eight subsystems individually**, not sampled.
+- readiness is reconciled for **all eight subsystems individually**, not sampled;
+- each subsystem's `[Stale by Requirement]` and `[Stale by Code]` must equal `StaleByReq` and
+  `StaleByCode` in `vw_SubsystemReadiness`: the sum check above cannot tell 7 + 88 from 0 + 95.
 
 A headline can agree while every cut beneath it is wrong, and the cuts are what the report pages
 show. Project 3 in this portfolio shipped a measure that was correct for the one vendor anyone
@@ -123,6 +125,11 @@ Then a stacked bar of the five verification states — `Requirements` by
 `Requirement[VerificationState]` — so the 41-point gap immediately decomposes into *why*.
 
 Slicers: `Requirement[Priority]` (default **MustShip**) and `Dim_Subsystem[Criticality]`.
+Then use **Format > Edit interactions** so these two slicers filter **only the verification-state
+bar**, not the three headline cards. The cards are the published comparison: completion across all
+work items against readiness across must-ship requirements. `WorkItem` is filtered through
+`Requirement`, so a Priority slicer left connected to them changes the completion card, and the page
+no longer shows the figure the case study quotes.
 
 ### Page 2 — Where the gap is
 
@@ -139,10 +146,16 @@ not behind on testing, it is still being designed.
 ### Page 3 — What to do next
 
 - Table from `Queue` sorted by `PriorityRank`: rank, requirement, subsystem, type, owner,
-  `ActionCode`, `RigHours`, `CumulativeRigHours`, `RecommendedAction`.
-- Cards: `Outstanding`, `Schedulable This Week`, `Rig Weeks Outstanding`.
+  `ActionCode`, `RigHours`, `CumulativeRigHours`, `RecommendedAction`. `CumulativeRigHours` is
+  hidden in the model, because summing a running total means nothing: turn on **View hidden** in the
+  Fields pane to add it, and set its aggregation to **Don't summarize**.
+- Cards: `Outstanding`, `Schedulable This Week`, `Rig Weeks Outstanding`, `Week Coverage %`.
 - Slicer on `Queue[IsThisWeek]` — **default it to True**, so the page opens on work that can
-  actually be booked rather than on 226 rows nobody can action this month.
+  actually be booked rather than on 226 rows nobody can action this month. Use **Edit
+  interactions** so it filters the table and the ActionCode bar but **none of the four cards**, which
+  describe the whole queue. Connected, `Outstanding` and `Rig Weeks Outstanding` would show only the
+  selected slice, and with the slicer on False `Schedulable This Week` would go blank beside a
+  `Week Coverage %` still reading 17.7%, since that measure ignores the slicer by design.
 - Bar of `Outstanding` by `Queue[ActionCode]`, so the mix of *re-run* versus *raise the test level*
   versus *verify for the first time* is visible. Those need different people.
 

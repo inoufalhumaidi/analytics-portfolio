@@ -59,7 +59,7 @@ project-4-talon-robotics/
 │   └── Talon_Readiness_Control.xlsx  the operational control
 ├── powerbi/
 │   ├── Build_PowerBI_Model.ps1       scripts the model into a live Desktop session (AMO/TOM)
-│   ├── Validate_PowerBI_Model.ps1    queries the model in DAX and reconciles 28 figures
+│   ├── Validate_PowerBI_Model.ps1    queries the model in DAX and reconciles 29 figures
 │   ├── DAX_Measures.md               the semantic model and every measure, with the reasoning
 │   └── POWER_BI_BUILD_GUIDE.md       how to rebuild it, and the report pages to draw by hand
 ├── docs/
@@ -168,11 +168,12 @@ LibreOffice.
 
 `powerbi/Build_PowerBI_Model.ps1` scripts 12 tables, 9 relationships and **53 DAX measures** into a
 running Desktop session through the local Analysis Services engine. `Validate_PowerBI_Model.ps1`
-then queries the model **in DAX** and reconciles **28 of 28** figures against SQL.
+then queries the model **in DAX** and reconciles **29 of 29** figures against SQL.
 
-Three of those checks go past the totals on purpose: the five verification states must partition the
-population, the two stale buckets must be mutually exclusive, and readiness is reconciled for **all
-eight subsystems individually**. A headline can agree while every cut beneath it is wrong — Project
+Four of those checks go past the totals on purpose: the five verification states must partition the
+population, the two stale buckets must be mutually exclusive, each subsystem's stale items must split
+between the two buckets exactly as SQL splits them, and readiness is reconciled for **all eight
+subsystems individually**. A headline can agree while every cut beneath it is wrong — Project
 3 shipped a measure that was right for the one vendor anyone checked and wrong for the other 35.
 
 ---
@@ -234,7 +235,7 @@ powershell excel/Validate_Workbook.ps1                                  # expect
 
 # Power BI: open Desktop on a blank report first, then
 powershell powerbi/Build_PowerBI_Model.ps1                              # click the credential prompt
-powershell powerbi/Validate_PowerBI_Model.ps1                           # expect 28/28
+powershell powerbi/Validate_PowerBI_Model.ps1                           # expect 29/29
 ```
 
 **The gate is a separate step.** `04_data_quality_checks.sql` *creates* `usp_RunDataQualityChecks`; it does not run it. Executing the procedure is what applies the tolerance — it passes here at **1.779% against 2.000%**.

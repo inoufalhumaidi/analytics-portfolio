@@ -111,5 +111,5 @@ Stated rather than quietly omitted:
   usefully assert that a *different* script returns a non-zero exit code; it is checked by running
   the gate at a tightened tolerance and reading `$?`. The command is in the validation report.
 - **No requirement covers the Power BI layer's correctness.** `Validate_PowerBI_Model.ps1`
-  reconciles 28 figures against SQL, but no BR row demands it, so it is currently an
+  reconciles 29 figures against SQL, but no BR row demands it, so it is currently an
   over-delivery rather than a traced requirement.

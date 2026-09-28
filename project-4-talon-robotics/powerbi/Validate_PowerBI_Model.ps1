@@ -17,9 +17,10 @@ WHY A SEPARATE SCRIPT
     were both wrong, because both came from the same flawed written definition.
     Agreement is necessary, not sufficient.
 
-    Two checks below go further than the totals on purpose. The verification
-    states must partition the population, and the two stale buckets must be
-    mutually exclusive: a total can agree while the split beneath it is wrong,
+    Four checks below go further than the totals on purpose. The verification
+    states must partition the population, the two stale buckets must be
+    mutually exclusive, and readiness and the stale split are compared with SQL
+    for every subsystem: a total can agree while the split beneath it is wrong,
     and the split is what the report pages actually show.
 
 DATA DISCLOSURE: Talon Robotics is fictional; all data is synthetic. No
@@ -201,6 +202,39 @@ if ($subFail -eq 0) {
 } else {
     $fail++
     Write-Host ("  {0,-30} {1,16}  <>  {2,-16} MISMATCH" -f "Readiness -- all $($subs.Count) subsystems", "$subFail wrong", "") -ForegroundColor Red
+}
+
+# Each stale bucket against SQL, per subsystem. The exclusivity check above
+# passes whichever way round the buckets are ordered (7 + 88 and 0 + 95 both sum
+# to 95), so it could never catch DAX and SQL disagreeing on the ORDER -- and the
+# sweep found exactly that in SQL, which showed 95 / 0 while DAX showed 88 / 7.
+# This compares the split itself, subsystem by subsystem.
+$stSubs = @()
+$cn = New-Object System.Data.SqlClient.SqlConnection("Server=$SqlServerInst;Database=$SqlDb;Integrated Security=True;")
+$cn.Open()
+try {
+    $cmd = $cn.CreateCommand()
+    $cmd.CommandText = "SELECT SubsystemCode, StaleByReq, StaleByCode FROM dbo.vw_SubsystemReadiness ORDER BY SubsystemCode;"
+    $rdr = $cmd.ExecuteReader()
+    while ($rdr.Read()) { $stSubs += @{ Code = [string]$rdr[0]; ByReq = [double]$rdr[1]; ByCode = [double]$rdr[2] } }
+    $rdr.Close()
+} finally { $cn.Close() }
+
+$stFail = 0; $stReq = 0; $stCode = 0
+foreach ($sv in $stSubs) {
+    $dReq  = Get-Dax "CALCULATE ( [Stale by Requirement] + 0, Dim_Subsystem[SubsystemCode] = ""$($sv.Code)"" )"
+    $dCode = Get-Dax "CALCULATE ( [Stale by Code] + 0, Dim_Subsystem[SubsystemCode] = ""$($sv.Code)"" )"
+    $stReq += $dReq; $stCode += $dCode
+    if ($dReq -ne $sv.ByReq -or $dCode -ne $sv.ByCode) {
+        $stFail++; $failures += ("Stale buckets {0}: Power BI {1} by requirement / {2} by code vs SQL {3} / {4}" -f $sv.Code, $dReq, $dCode, $sv.ByReq, $sv.ByCode)
+    }
+}
+if ($stFail -eq 0) {
+    $pass++
+    Write-Host ("  {0,-30} {1,16}  ==  {2,-16} MATCH" -f "Stale split -- all $($stSubs.Count) subsystems", "$stReq req / $stCode code", "SQL equal") -ForegroundColor Green
+} else {
+    $fail++
+    Write-Host ("  {0,-30} {1,16}  <>  {2,-16} MISMATCH" -f "Stale split -- all $($stSubs.Count) subsystems", "$stFail wrong", "") -ForegroundColor Red
 }
 
 $cnDax.Close()

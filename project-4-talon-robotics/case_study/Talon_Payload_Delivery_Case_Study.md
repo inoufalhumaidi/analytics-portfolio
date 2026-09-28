@@ -99,8 +99,8 @@ invalidates.
 
 Every headline figure is implemented twice — once in T-SQL, once in Excel formulas — and reconciled
 on the workbook's own Validation sheet: **16 of 16 agree**. The Power BI model is queried in DAX and
-reconciled against SQL on **28 figures**, including the state partition and readiness for all eight
-subsystems individually. The acceptance suite is **23 of 23**, and the generator is deterministic,
+reconciled against SQL on **29 figures**, including the state partition, and readiness and the
+stale split for all eight subsystems individually. The acceptance suite is **23 of 23**, and the generator is deterministic,
 so every figure here is reproducible by a reader who runs the scripts.
 
 Agreement between tools is necessary, not sufficient — two implementations derived from the same

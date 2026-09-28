@@ -37,7 +37,9 @@ function ConvertTo-Inline {
     # inline code before emphasis: a backtick span must not have its * interpreted
     $s = [regex]::Replace($s, '`([^`]+)`', '<code>$1</code>')
     $s = [regex]::Replace($s, '\[([^\]]+)\]\(([^)]+)\)', '<a href="$2">$1</a>')
-    $s = [regex]::Replace($s, '\*\*([^*]+)\*\*', '<strong>$1</strong>')
+    # bold may contain italics (**And *clarified* is not...**), so its body is
+    # any text up to the NEXT **, not "anything but an asterisk"
+    $s = [regex]::Replace($s, '\*\*(.+?)\*\*', '<strong>$1</strong>')
     $s = [regex]::Replace($s, '(?<![\*\w])\*([^*]+)\*(?!\*)', '<em>$1</em>')
     $s = $s -replace '---','&mdash;' -replace '\s--\s',' &mdash; '
     return $s

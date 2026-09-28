@@ -356,38 +356,58 @@ $W = $model.Tables["WorkItem"]
 $C = $model.Tables["BuildChurn"]
 $P = $model.Tables["Ref_Reporting"]
 
+# ---- MEASURES BEGIN -- Sync_Measures.ps1 reads every definition between these
+# ---- two markers, so the .pbix and DAX_Measures.md can be checked against them.
+
+# EVERY FILTER ON A COLUMN THE REPORT CAN ALSO FILTER IS WRAPPED IN KEEPFILTERS.
+# A plain filter argument such as Requirement[Priority] = "MustShip" REPLACES any
+# filter the report already has on that column instead of intersecting with it:
+# with the Priority slicer on ShouldShip, must-ship readiness (51.96%) sat beside
+# should-ship completion (93.66%) as if they were one population. KEEPFILTERS
+# intersects. Every % measure carries "+ 0" on its numerator, so BLANK means
+# "nothing to measure" and never hides a genuine 0%. Two filters stay plain on
+# purpose: the numerator of [Week Coverage %], marked there, and the MetricName
+# filter in the RAG threshold reads, which runs after REMOVEFILTERS.
+
 # --- Reporting anchor -----------------------------------------------------
 New-Measure $P "As Of Build" "MAX ( Ref_Reporting[AsOfBuild] )" '#,0' "00 Reporting"
 New-Measure $P "As Of Date"  "MAX ( Ref_Reporting[AsOfDate] )"  'yyyy-mm-dd' "00 Reporting"
 
 # --- Population -----------------------------------------------------------
 New-Measure $R "Requirements"  "COUNTROWS ( Requirement )" '#,0' "01 Population"
-New-Measure $R "Must Ship"     "CALCULATE ( COUNTROWS ( Requirement ), Requirement[Priority] = ""MustShip"" )" '#,0' "01 Population"
-New-Measure $R "Should Ship"   "CALCULATE ( COUNTROWS ( Requirement ), Requirement[Priority] = ""ShouldShip"" )" '#,0' "01 Population"
+New-Measure $R "Must Ship"     "CALCULATE ( COUNTROWS ( Requirement ), KEEPFILTERS ( Requirement[Priority] = ""MustShip"" ) )" '#,0' "01 Population"
+New-Measure $R "Should Ship"   "CALCULATE ( COUNTROWS ( Requirement ), KEEPFILTERS ( Requirement[Priority] = ""ShouldShip"" ) )" '#,0' "01 Population"
 
 # --- The contrast ---------------------------------------------------------
 # The two headline numbers, defined next to each other on purpose. Anyone
 # editing one should have to look at the other.
 New-Measure $W "Work Items"           "COUNTROWS ( WorkItem )" '#,0' "02 The contrast"
-New-Measure $W "Work Items Closed"    "CALCULATE ( COUNTROWS ( WorkItem ), WorkItem[WorkItemStatus] = ""Closed"" )" '#,0' "02 The contrast"
-New-Measure $W "Work Item Completion %" "DIVIDE ( [Work Items Closed], [Work Items] ) * 100" '0.00' "02 The contrast"
+New-Measure $W "Work Items Closed"    "CALCULATE ( COUNTROWS ( WorkItem ), KEEPFILTERS ( WorkItem[WorkItemStatus] = ""Closed"" ) )" '#,0' "02 The contrast"
+New-Measure $W "Work Item Completion %" "DIVIDE ( [Work Items Closed] + 0, [Work Items] ) * 100" '0.00' "02 The contrast"
 
 # Readiness is over MUST-SHIP only. A readiness percentage that mixes
 # must-ship and nice-to-have is arithmetic with no decision attached: it cannot
 # tell you whether to ship.
 New-Measure $R "Current Must Ship" @"
 CALCULATE ( COUNTROWS ( Requirement ),
-    Requirement[Priority] = "MustShip", Requirement[IsCurrent] = TRUE () )
+    KEEPFILTERS ( Requirement[Priority] = "MustShip" ), KEEPFILTERS ( Requirement[IsCurrent] = TRUE () ) )
 "@ '#,0' "02 The contrast"
-New-Measure $R "Ship Readiness %" "DIVIDE ( [Current Must Ship], [Must Ship] ) * 100" '0.00' "02 The contrast"
-New-Measure $R "Readiness Gap vs Reported" "[Work Item Completion %] - [Ship Readiness %]" '0.00' "02 The contrast"
+New-Measure $R "Ship Readiness %" "DIVIDE ( [Current Must Ship] + 0, [Must Ship] ) * 100" '0.00' "02 The contrast"
+# Only where BOTH sides exist. Under a Priority slicer with no must-ship rows,
+# readiness is BLANK and the bare subtraction reported the whole completion
+# figure (93.66) as the gap.
+New-Measure $R "Readiness Gap vs Reported" @"
+VAR Reported = [Work Item Completion %]
+VAR Ready = [Ship Readiness %]
+RETURN IF ( NOT ISBLANK ( Reported ) && NOT ISBLANK ( Ready ), Reported - Ready )
+"@ '0.00' "02 The contrast"
 
 # --- Verification states --------------------------------------------------
-New-Measure $R "Has Evidence"        "CALCULATE ( COUNTROWS ( Requirement ), Requirement[HasEvidence] = TRUE () )" '#,0' "03 Verification"
-New-Measure $R "Verification Coverage %" "DIVIDE ( [Has Evidence], [Requirements] ) * 100" '0.00' "03 Verification"
-New-Measure $R "Meets Policy"        "CALCULATE ( COUNTROWS ( Requirement ), Requirement[MeetsPolicy] = TRUE () )" '#,0' "03 Verification"
-New-Measure $R "Policy Compliance %" "DIVIDE ( [Meets Policy], [Has Evidence] ) * 100" '0.00' "03 Verification"
-New-Measure $R "Current"             "CALCULATE ( COUNTROWS ( Requirement ), Requirement[IsCurrent] = TRUE () )" '#,0' "03 Verification"
+New-Measure $R "Has Evidence"        "CALCULATE ( COUNTROWS ( Requirement ), KEEPFILTERS ( Requirement[HasEvidence] = TRUE () ) )" '#,0' "03 Verification"
+New-Measure $R "Verification Coverage %" "DIVIDE ( [Has Evidence] + 0, [Requirements] ) * 100" '0.00' "03 Verification"
+New-Measure $R "Meets Policy"        "CALCULATE ( COUNTROWS ( Requirement ), KEEPFILTERS ( Requirement[MeetsPolicy] = TRUE () ) )" '#,0' "03 Verification"
+New-Measure $R "Policy Compliance %" "DIVIDE ( [Meets Policy] + 0, [Has Evidence] ) * 100" '0.00' "03 Verification"
+New-Measure $R "Current"             "CALCULATE ( COUNTROWS ( Requirement ), KEEPFILTERS ( Requirement[IsCurrent] = TRUE () ) )" '#,0' "03 Verification"
 
 # Denominator is requirements that HAVE policy-compliant evidence, not all
 # requirements. Mixing "never verified properly" into a staleness rate makes
@@ -398,10 +418,10 @@ COUNTROWS (
         Requirement[MeetsPolicy] = TRUE ()
         && ( Requirement[StaleByCode] = TRUE () || Requirement[StaleByRequirement] = TRUE () ) ) )
 "@ '#,0' "03 Verification"
-New-Measure $R "Stale Verification %" "DIVIDE ( [Stale], [Meets Policy] ) * 100" '0.00' "03 Verification"
+New-Measure $R "Stale Verification %" "DIVIDE ( [Stale] + 0, [Meets Policy] ) * 100" '0.00' "03 Verification"
 
-New-Measure $R "No Evidence"     "CALCULATE ( COUNTROWS ( Requirement ), Requirement[HasEvidence] = FALSE () )" '#,0' "03 Verification"
-New-Measure $R "Insufficient"    "CALCULATE ( COUNTROWS ( Requirement ), Requirement[HasEvidence] = TRUE (), Requirement[MeetsPolicy] = FALSE () )" '#,0' "03 Verification"
+New-Measure $R "No Evidence"     "CALCULATE ( COUNTROWS ( Requirement ), KEEPFILTERS ( Requirement[HasEvidence] = FALSE () ) )" '#,0' "03 Verification"
+New-Measure $R "Insufficient"    "CALCULATE ( COUNTROWS ( Requirement ), KEEPFILTERS ( Requirement[HasEvidence] = TRUE () ), KEEPFILTERS ( Requirement[MeetsPolicy] = FALSE () ) )" '#,0' "03 Verification"
 
 # The two stale buckets are made MUTUALLY EXCLUSIVE, and in the same order the
 # SQL view uses: a requirement that is stale on both counts is reported as
@@ -411,24 +431,33 @@ New-Measure $R "Insufficient"    "CALCULATE ( COUNTROWS ( Requirement ), Require
 # same total -- and the total would still agree, so nothing would look wrong.
 New-Measure $R "Stale by Requirement" @"
 CALCULATE ( COUNTROWS ( Requirement ),
-    Requirement[MeetsPolicy] = TRUE (), Requirement[StaleByRequirement] = TRUE () )
+    KEEPFILTERS ( Requirement[MeetsPolicy] = TRUE () ), KEEPFILTERS ( Requirement[StaleByRequirement] = TRUE () ) )
 "@ '#,0' "03 Verification"
 New-Measure $R "Stale by Code" @"
 CALCULATE ( COUNTROWS ( Requirement ),
-    Requirement[MeetsPolicy] = TRUE (),
-    Requirement[StaleByRequirement] = FALSE (), Requirement[StaleByCode] = TRUE () )
+    KEEPFILTERS ( Requirement[MeetsPolicy] = TRUE () ),
+    KEEPFILTERS ( Requirement[StaleByRequirement] = FALSE () ), KEEPFILTERS ( Requirement[StaleByCode] = TRUE () ) )
 "@ '#,0' "03 Verification"
 
-New-Measure $R "Self Verified"   "CALCULATE ( COUNTROWS ( Requirement ), Requirement[PassingButSelfVerified] > 0, Requirement[MeetsPolicy] = FALSE () )" '#,0' "03 Verification"
-New-Measure $R "Under Levelled"  "CALCULATE ( COUNTROWS ( Requirement ), Requirement[PassingButUnderLevelled] > 0, Requirement[MeetsPolicy] = FALSE () )" '#,0' "03 Verification"
+New-Measure $R "Self Verified"   "CALCULATE ( COUNTROWS ( Requirement ), KEEPFILTERS ( Requirement[PassingButSelfVerified] > 0 ), KEEPFILTERS ( Requirement[MeetsPolicy] = FALSE () ) )" '#,0' "03 Verification"
+New-Measure $R "Under Levelled"  "CALCULATE ( COUNTROWS ( Requirement ), KEEPFILTERS ( Requirement[PassingButUnderLevelled] > 0 ), KEEPFILTERS ( Requirement[MeetsPolicy] = FALSE () ) )" '#,0' "03 Verification"
 
 # --- Queue and schedule ---------------------------------------------------
 New-Measure $Q "Outstanding"          "COUNTROWS ( Queue )" '#,0' "04 Queue"
 New-Measure $Q "Rig Hours Outstanding" "SUM ( Queue[RigHours] )" '#,0.0' "04 Queue"
 # The only figure here a programme board can act on without a further study.
 New-Measure $Q "Rig Weeks Outstanding" "DIVIDE ( [Rig Hours Outstanding], 180 )" '0.0' "04 Queue"
-New-Measure $Q "Schedulable This Week" "CALCULATE ( COUNTROWS ( Queue ), Queue[IsThisWeek] = TRUE () )" '#,0' "04 Queue"
-New-Measure $Q "Week Coverage %"       "DIVIDE ( [Schedulable This Week], [Outstanding] ) * 100" '0.0' "04 Queue"
+New-Measure $Q "Schedulable This Week" "CALCULATE ( COUNTROWS ( Queue ), KEEPFILTERS ( Queue[IsThisWeek] = TRUE () ) )" '#,0' "04 Queue"
+# The share of the WHOLE outstanding queue that fits this week, whatever a
+# slicer on IsThisWeek says: with the build guide's Page 3 slicer on True the
+# old ratio compared this week with itself and read 100.0. The numerator's
+# filter stays plain on purpose; the denominator clears that one column.
+New-Measure $Q "Week Coverage %" @"
+DIVIDE (
+    CALCULATE ( COUNTROWS ( Queue ), Queue[IsThisWeek] = TRUE () ) + 0,
+    CALCULATE ( [Outstanding], REMOVEFILTERS ( Queue[IsThisWeek] ) )
+) * 100
+"@ '0.0' "04 Queue"
 New-Measure $Q "Avg Intervening Builds" "AVERAGE ( Queue[InterveningBuilds] )" '0.0' "04 Queue"
 
 # --- Churn ----------------------------------------------------------------
@@ -441,11 +470,11 @@ New-Measure $C "Churn per Readiness Point" "DIVIDE ( [Builds Changed], [Ship Rea
 
 # --- RAID -----------------------------------------------------------------
 New-Measure $D "RAID Items"      "COUNTROWS ( RAID )" '#,0' "06 RAID"
-New-Measure $D "RAID Open"       "CALCULATE ( COUNTROWS ( RAID ), RAID[IsOpen] = TRUE () )" '#,0' "06 RAID"
-New-Measure $D "RAID Overdue"    "CALCULATE ( COUNTROWS ( RAID ), RAID[IsOverdue] = TRUE () )" '#,0' "06 RAID"
-New-Measure $D "Overdue RAID %"  "DIVIDE ( [RAID Overdue], [RAID Open] ) * 100" '0.00' "06 RAID"
-New-Measure $D "Critical RAID Open" "CALCULATE ( COUNTROWS ( RAID ), RAID[ExposureBand] = ""Critical"", RAID[IsOpen] = TRUE () )" '#,0' "06 RAID"
-New-Measure $D "Open RAID Exposure" "CALCULATE ( SUM ( RAID[ExposureScore] ), RAID[IsOpen] = TRUE () )" '#,0' "06 RAID"
+New-Measure $D "RAID Open"       "CALCULATE ( COUNTROWS ( RAID ), KEEPFILTERS ( RAID[IsOpen] = TRUE () ) )" '#,0' "06 RAID"
+New-Measure $D "RAID Overdue"    "CALCULATE ( COUNTROWS ( RAID ), KEEPFILTERS ( RAID[IsOverdue] = TRUE () ) )" '#,0' "06 RAID"
+New-Measure $D "Overdue RAID %"  "DIVIDE ( [RAID Overdue] + 0, [RAID Open] ) * 100" '0.00' "06 RAID"
+New-Measure $D "Critical RAID Open" "CALCULATE ( COUNTROWS ( RAID ), KEEPFILTERS ( RAID[ExposureBand] = ""Critical"" ), KEEPFILTERS ( RAID[IsOpen] = TRUE () ) )" '#,0' "06 RAID"
+New-Measure $D "Open RAID Exposure" "CALCULATE ( SUM ( RAID[ExposureScore] ), KEEPFILTERS ( RAID[IsOpen] = TRUE () ) )" '#,0' "06 RAID"
 
 # --- RAG colours ----------------------------------------------------------
 # A colour measure returns a HEX STRING, not a number. Power BI's "format by
@@ -460,32 +489,42 @@ $ragMetrics = @(
     @("Stale Verification",   "StaleVerificationPct",    "[Stale Verification %]",    $R),
     @("Policy Compliance",    "PolicyCompliancePct",     "[Policy Compliance %]",     $R),
     @("Work Item Completion", "WorkItemCompletionPct",   "[Work Item Completion %]",  $W),
-    @("Critical RAID",        "CriticalRAIDOpen",        "[Critical RAID Open]",      $D),
+    # + 0: no critical item open is a genuine zero, and it should read Green.
+    @("Critical RAID",        "CriticalRAIDOpen",        "[Critical RAID Open] + 0",  $D),
     @("Overdue RAID",         "OverdueRAIDPct",          "[Overdue RAID %]",          $D)
 )
 foreach ($m in $ragMetrics) {
     $label = $m[0]; $metric = $m[1]; $val = $m[2]; $tbl = $m[3]
+    # BLANK means "nothing to measure here" (the ratios carry + 0, so a genuine
+    # 0% is not BLANK). DAX compares BLANK as 0, so without the guard a
+    # cross-filter that emptied a denominator coloured it Green or Red at random.
+    # Thresholds clear every filter on Ref_ReadinessTargets first: LOOKUPVALUE
+    # respected them, so a filter on that table could blank a threshold.
+    $targets = @"
+VAR T = CALCULATE ( VALUES ( Ref_ReadinessTargets[TargetValue] ),  REMOVEFILTERS ( Ref_ReadinessTargets ), Ref_ReadinessTargets[MetricName] = "$metric" )
+VAR W = CALCULATE ( VALUES ( Ref_ReadinessTargets[WarningValue] ), REMOVEFILTERS ( Ref_ReadinessTargets ), Ref_ReadinessTargets[MetricName] = "$metric" )
+VAR Dir = CALCULATE ( VALUES ( Ref_ReadinessTargets[Direction] ),  REMOVEFILTERS ( Ref_ReadinessTargets ), Ref_ReadinessTargets[MetricName] = "$metric" )
+"@
     New-Measure $tbl "$label Colour" @"
 VAR V = $val
-VAR T = LOOKUPVALUE ( Ref_ReadinessTargets[TargetValue],  Ref_ReadinessTargets[MetricName], "$metric" )
-VAR W = LOOKUPVALUE ( Ref_ReadinessTargets[WarningValue], Ref_ReadinessTargets[MetricName], "$metric" )
-VAR Dir = LOOKUPVALUE ( Ref_ReadinessTargets[Direction],  Ref_ReadinessTargets[MetricName], "$metric" )
+$targets
 RETURN
-    IF ( Dir = "HigherBetter",
-         SWITCH ( TRUE (), V >= T, "#C6EFCE", V >= W, "#FFEB9C", "#FFC7CE" ),
-         SWITCH ( TRUE (), V <= T, "#C6EFCE", V <= W, "#FFEB9C", "#FFC7CE" ) )
+    IF ( ISBLANK ( V ) || ISBLANK ( T ) || ISBLANK ( W ), BLANK (),
+         IF ( Dir = "HigherBetter",
+              SWITCH ( TRUE (), V >= T, "#C6EFCE", V >= W, "#FFEB9C", "#FFC7CE" ),
+              SWITCH ( TRUE (), V <= T, "#C6EFCE", V <= W, "#FFEB9C", "#FFC7CE" ) ) )
 "@ $null "07 Status"
     New-Measure $tbl "$label Status" @"
 VAR V = $val
-VAR T = LOOKUPVALUE ( Ref_ReadinessTargets[TargetValue],  Ref_ReadinessTargets[MetricName], "$metric" )
-VAR W = LOOKUPVALUE ( Ref_ReadinessTargets[WarningValue], Ref_ReadinessTargets[MetricName], "$metric" )
-VAR Dir = LOOKUPVALUE ( Ref_ReadinessTargets[Direction],  Ref_ReadinessTargets[MetricName], "$metric" )
+$targets
 RETURN
-    IF ( Dir = "HigherBetter",
-         SWITCH ( TRUE (), V >= T, "Green", V >= W, "Amber", "Red" ),
-         SWITCH ( TRUE (), V <= T, "Green", V <= W, "Amber", "Red" ) )
+    IF ( ISBLANK ( V ) || ISBLANK ( T ) || ISBLANK ( W ), BLANK (),
+         IF ( Dir = "HigherBetter",
+              SWITCH ( TRUE (), V >= T, "Green", V >= W, "Amber", "Red" ),
+              SWITCH ( TRUE (), V <= T, "Green", V <= W, "Amber", "Red" ) ) )
 "@ $null "07 Status"
 }
+# ---- MEASURES END
 
 $model.SaveChanges() | Out-Null
 $measureCount = ($model.Tables | ForEach-Object { $_.Measures.Count } | Measure-Object -Sum).Sum
