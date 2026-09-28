@@ -43,7 +43,7 @@ This happens once per Desktop session, and again after the tables are dropped an
 powershell powerbi/Validate_PowerBI_Model.ps1
 ```
 
-Expect **31 of 31 checks reconcile**. This queries the model in DAX and compares each answer with
+Expect **34 of 34 checks reconcile**. This queries the model in DAX and compares each answer with
 the SQL that is supposed to produce it, to the number of decimals SQL publishes.
 
 Do not skip this and do not substitute a glance at the field list. `Build_PowerBI_Model.ps1` will
@@ -60,16 +60,17 @@ definition. Agreement is necessary, not sufficient.
 ## 3. The model
 
 **Ten tables.** Four dimensions (`Dim_Date`, `Dim_Vendor`, `Dim_Part`, `Dim_Buyer`), three facts
-loaded from SQL views (`POLine`, `PriceErosion`, `RenegotiationQueue`) and three reference tables
+loaded from SQL table-valued functions (`POLine`, `PriceErosion`, `RenegotiationQueue`) and three reference tables
 (`Ref_SpendTargets`, `Ref_PriceErosionBenchmark`, `Ref_Reporting`).
 
-The facts come from the **views**, not the raw tables. The landed-cost identity, the dated contract
+The facts come from the **functions** (`fn_POLineCost`, `fn_PriceErosion`, `fn_RenegotiationQueue`), not the raw tables. The landed-cost identity, the dated contract
 resolution and the erosion model are each defined once in SQL and asserted by the acceptance tests;
 re-deriving them in DAX would create a second definition free to drift from the first. DAX does the
 aggregation, the ratios, the time intelligence and the conditional formatting — what a semantic
 model is actually for.
 
-**Ten relationships**, all single-direction, all many-to-one onto a dimension. `Dim_Part` and
+**Ten relationships**, all single-direction and many-to-one: nine from a fact onto a dimension, and
+one from `Dim_Part` onto `Ref_PriceErosionBenchmark` by `Category`. `Dim_Part` and
 `Dim_Vendor` each feed three facts, which is an ordinary star; the ambiguity trap would be a
 relationship *between* two facts, and there is none.
 
@@ -144,8 +145,10 @@ erosion capture is red. The two cards sitting side by side is the argument.
 
 ### Page 2 — Erosion detail
 
-- Table: `Dim_Part[PartNumber]`, `Dim_Vendor[VendorName]`, `FirstPrice`, `LastPrice`,
-  `ExpectedPrice`, `ErosionCapturePct`, `AnnualOpportunity` from `PriceErosion`.
+- Table: `Dim_Part[PartNumber]`, `Dim_Vendor[VendorID]`, `Dim_Vendor[VendorName]`, `FirstPrice`,
+  `LastPrice`, `ExpectedPrice`, `ErosionCapturePct`, `AnnualOpportunity` from `PriceErosion`. Keep
+  `VendorID` in the table: two vendors, VEN-024 and VEN-036, share the name "Aperture Technologies",
+  and a visual grouped by name alone would merge them.
 - Scatter: `ErosionCapturePct` (X) against `TTMSpend` (Y), one point per pair, sized by
   `AnnualOpportunity`, coloured by `Dim_Part[IsSingleSource]`. The sole-source cluster low on the
   X axis is the finding.
@@ -158,7 +161,12 @@ erosion capture is red. The two cards sitting side by side is the argument.
   `AnnualOpportunity`, `LeverageScore`, `ActionCode`, `RecommendedAction`.
 - Cards: `Queue Pairs`, `This Quarter Pairs`, `This Quarter Opportunity`, `Quarter Coverage %`.
 - Slicer on `RenegotiationQueue[IsThisQuarter]` — default it to **True**, so the page opens on the
-  work that is actually schedulable rather than on 185 rows nobody can action.
+  work that is actually schedulable rather than on 185 rows nobody can action. Use **Edit
+  interactions** so it filters the table but **none of the four cards**, which describe the whole
+  queue and this quarter's share of it. Connected, `Queue Pairs` would count only the selected
+  slice, and with the slicer on False the two this-quarter cards would go blank. `Quarter Coverage %`
+  ignores the slicer by design (its denominator clears `IsThisQuarter`). Keep `IsThisQuarter` the
+  only slicer on a `RenegotiationQueue` column on this page; `DAX_Measures.md` §7a explains why.
 
 ### Page 4 — Vendor quality
 

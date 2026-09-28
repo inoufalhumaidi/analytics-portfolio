@@ -63,7 +63,7 @@ project-3-lumen-optics-spend/
 │   └── Lumen_Spend_Scorecard.xlsx    the operational control
 ├── powerbi/
 │   ├── Build_PowerBI_Model.ps1       scripts the model into a live Desktop session (AMO/TOM)
-│   ├── Validate_PowerBI_Model.ps1    queries the model in DAX and reconciles 31 figures against SQL
+│   ├── Validate_PowerBI_Model.ps1    queries the model in DAX and reconciles 34 figures against SQL
 │   ├── DAX_Measures.md               the semantic model and every measure, with the reasoning
 │   ├── POWER_BI_BUILD_GUIDE.md       how to rebuild it, and the report pages to draw by hand
 │   └── Lumen_Spend_Scorecard.pbix    the built model (10 tables, 10 relationships, 69 measures)
@@ -122,12 +122,12 @@ and still loses on cost per accepted unit.
 185 vendor–part pairs is not a plan. A category manager can run perhaps eight serious negotiations
 a quarter, so the queue stays complete for audit and marks what is workable.
 
-**43 pairs this quarter, carrying 65.6% of the $4.05M opportunity.**
+**43 pairs this quarter, carrying 66.1% of the $4.05M opportunity.**
 
 | Action | Pairs | Opportunity | This quarter |
 |---|---:|---:|---:|
-| `RENEGOTIATE` | 54 | $1,631,840 | 16 |
-| `PUT_ON_CONTRACT` | 48 | $1,623,978 | 19 |
+| `RENEGOTIATE` | 54 | $1,631,840 | 15 |
+| `PUT_ON_CONTRACT` | 48 | $1,623,978 | 20 |
 | `DUAL_SOURCE` | 8 | $515,330 | 8 |
 | `ACCEPT` | 73 | $276,461 | 0 |
 | `FIX_QUALITY` | 2 | — | 0 |
@@ -174,9 +174,10 @@ engine it exposes. Sixty-nine measures clicked into a UI cannot be reviewed, dif
 scripted, they sit in source control beside the SQL that feeds them, and a reviewer can check that
 the leverage weights in DAX are the same weights the SQL uses.
 
-`powerbi/Validate_PowerBI_Model.ps1` then queries the model **in DAX** and reconciles 31 figures
-against the SQL that produces them — including the cost index for all 36 vendors individually.
-**31 of 31 reconcile.**
+`powerbi/Validate_PowerBI_Model.ps1` then queries the model **in DAX** and reconciles 34 figures
+against the SQL that produces them — including the cost index for every vendor and every buyer,
+each buyer's queue pairs and this-quarter opportunity, and all 185 queue rows with their ranks.
+**34 of 34 reconcile.**
 
 That validator is not optional decoration. The build script reports complete success against a
 model that loaded zero rows, because creating tables and measures never touches data. And the first
@@ -224,7 +225,7 @@ powershell excel/Validate_Workbook.ps1                               # expect 14
 
 # Power BI: open Desktop on a blank report first, then
 powershell powerbi/Build_PowerBI_Model.ps1                           # click the credential prompt
-powershell powerbi/Validate_PowerBI_Model.ps1                        # expect 31/31
+powershell powerbi/Validate_PowerBI_Model.ps1                        # expect 34/34
 ```
 
 **The gate is a separate step.** `04_data_quality_checks.sql` *creates* `usp_RunDataQualityChecks`; it does not run it. Executing the procedure is what applies the tolerance — it passes here at **0.497% against 0.500%**, which is a margin of three thousandths and is reported as a margin rather than as a green light.

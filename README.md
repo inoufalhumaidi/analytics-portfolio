@@ -53,11 +53,11 @@ Start with the project [README](project-2-vantage-receivables/README.md) for the
 - **A metric that variance reporting is structurally blind to.** Optical components follow learning curves, so a supplier who renews a contract *flat* keeps everything the curve was supposed to hand back — and because the price never rose, purchase price variance records zero forever. Purchase price variance reads **−0.19% (green)** while **$4,047,609 a year**, 8.3% of direct-materials spend, is going uncollected.
 - **The gap is worst exactly where leverage is weakest.** Parts with two or more qualified suppliers capture 38.26% of the expected erosion; sole-source parts capture **8.91%**. Suppliers hold price precisely where you cannot leave — obvious economically, and now quantified at $1.47M.
 - **The cheapest supplier is the most expensive one.** On a shared laser diode part, the vendor with the lowest unit price ($184.14 against $197.43) is *dearer per accepted unit* once a 91.6% acceptance rate is counted. Across the book, **$1,571,168** of material was paid for and cannot be used.
-- **A queue that decides the action by leverage, not by value.** 185 vendor-part pairs ranked, bounded to the **43** a six-person sourcing team can actually run in a quarter — covering 65.6% of the gap — with sole-source pairs routed to `DUAL_SOURCE` rather than into negotiations nobody can win, and 73 low-value pairs honestly parked as `ACCEPT`.
-- **A scripted Power BI model, reconciled rather than eyeballed.** 9 tables, 10 relationships and
+- **A queue that decides the action by leverage, not by value.** 185 vendor-part pairs ranked, bounded to the **43** a six-person sourcing team can actually run in a quarter — covering 66.1% of the gap — with sole-source pairs routed to `DUAL_SOURCE` rather than into negotiations nobody can win, and 73 low-value pairs honestly parked as `ACCEPT`.
+- **A scripted Power BI model, reconciled rather than eyeballed.** 10 tables, 10 relationships and
 69 DAX measures are built by script into a live Desktop session, and a second script queries the
-model *in DAX* and reconciles 31 figures against the SQL that produces them — including the
-like-for-like cost index for all 36 vendors individually. That validator earned its place
+model *in DAX* and reconciles 34 figures against the SQL that produces them — including the
+like-for-like cost index for every vendor and every buyer, and the renegotiation queue row by row. That validator earned its place
 immediately: the first version of the cost-index measure returned exactly **100.00** for every
 filtered vendor, because the inner `MINX` intersected with the outer vendor filter and compared
 each vendor against itself. On an index where 100 means "best available", that reads as a result.

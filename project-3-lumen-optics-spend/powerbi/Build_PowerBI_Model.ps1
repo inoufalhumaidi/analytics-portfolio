@@ -352,6 +352,20 @@ $E = $model.Tables["PriceErosion"]
 $Q = $model.Tables["RenegotiationQueue"]
 $R = $model.Tables["Ref_Reporting"]
 
+# ---- MEASURES BEGIN -- Sync_Measures.ps1 reads every definition between these
+# ---- two markers, so the .pbix and DAX_Measures.md can be checked against them.
+
+# EVERY FILTER ON A COLUMN THE REPORT CAN ALSO FILTER IS WRAPPED IN KEEPFILTERS.
+# A plain filter argument such as POLine[IsOnContract] = FALSE () REPLACES any
+# filter the report already has on that column instead of intersecting with it:
+# under a slicer on IsOnContract = TRUE, [Maverick Spend] ignored the slicer and
+# the scorecard's [Maverick Spend % (TTM)] read 37.15% where the true answer is
+# none. KEEPFILTERS intersects.
+# Deliberate exceptions, each marked where it occurs: the TTM window
+# (DATESBETWEEN pins the published period), Cost Index's ALL ( Dim_Vendor ), and
+# the numerator of Quarter Coverage %. Ratio numerators carry "+ 0" so BLANK
+# means "nothing to measure" and never hides a genuine 0%.
+
 # --- Spend ---------------------------------------------------------------
 New-Measure $F "Extended Price"  "SUM ( POLine[ExtendedPrice] )"  '\$#,0;(\$#,0)' "01 Spend"
 New-Measure $F "Landed Cost"     "SUM ( POLine[LandedCost] )"     '\$#,0;(\$#,0)' "01 Spend"
@@ -364,9 +378,9 @@ New-Measure $R "As Of Date"  "MAX ( Ref_Reporting[AsOfDate] )" 'yyyy-mm-dd' "00 
 New-Measure $R "TTM Start"   "MAX ( Ref_Reporting[TTMStart] )"  'yyyy-mm-dd' "00 Reporting"
 
 # --- Contract compliance --------------------------------------------------
-New-Measure $F "On Contract Spend" "CALCULATE ( [Extended Price], POLine[IsOnContract] = TRUE () )" '\$#,0' "02 Contract"
-New-Measure $F "Maverick Spend"    "CALCULATE ( [Extended Price], POLine[IsOnContract] = FALSE () )" '\$#,0' "02 Contract"
-New-Measure $F "Maverick Spend %"  "DIVIDE ( [Maverick Spend], [Extended Price] ) * 100" '0.00' "02 Contract"
+New-Measure $F "On Contract Spend" "CALCULATE ( [Extended Price], KEEPFILTERS ( POLine[IsOnContract] = TRUE () ) )" '\$#,0' "02 Contract"
+New-Measure $F "Maverick Spend"    "CALCULATE ( [Extended Price], KEEPFILTERS ( POLine[IsOnContract] = FALSE () ) )" '\$#,0' "02 Contract"
+New-Measure $F "Maverick Spend %"  "DIVIDE ( [Maverick Spend] + 0, [Extended Price] ) * 100" '0.00' "02 Contract"
 
 # PPV is restricted to contracted lines on BOTH sides. Including off-contract
 # lines would treat a missing contracted price as zero and score "paid full
@@ -375,10 +389,10 @@ New-Measure $F "Purchase Price Variance" "SUM ( POLine[PPVAmount] )" '\$#,0;(\$#
 New-Measure $F "PPV %" @"
 DIVIDE (
     [Purchase Price Variance],
-    CALCULATE ( SUM ( POLine[ContractedExtended] ), NOT ISBLANK ( POLine[ContractedUnitPrice] ) )
+    CALCULATE ( SUM ( POLine[ContractedExtended] ), KEEPFILTERS ( NOT ISBLANK ( POLine[ContractedUnitPrice] ) ) )
 ) * 100
 "@ '0.00' "02 Contract"
-New-Measure $F "Ambiguous Contract Lines" "CALCULATE ( COUNTROWS ( POLine ), POLine[AgreementsInForce] > 1 )" '#,0' "02 Contract"
+New-Measure $F "Ambiguous Contract Lines" "CALCULATE ( COUNTROWS ( POLine ), KEEPFILTERS ( POLine[AgreementsInForce] > 1 ) )" '#,0' "02 Contract"
 
 # --- Price erosion --------------------------------------------------------
 # Spend-weighted, never a simple average: a pair carrying $4m and one carrying
@@ -400,9 +414,9 @@ New-Measure $E "Value Already Ahead of Curve" `
     '\$#,0;(\$#,0)' "03 Erosion"
 New-Measure $E "Pairs Assessed" "COUNTROWS ( PriceErosion )" '#,0' "03 Erosion"
 New-Measure $E "Pairs Capturing Under 20%" `
-    "CALCULATE ( COUNTROWS ( PriceErosion ), PriceErosion[ErosionCapturePct] < 20 )" '#,0' "03 Erosion"
+    "CALCULATE ( COUNTROWS ( PriceErosion ), KEEPFILTERS ( PriceErosion[ErosionCapturePct] < 20 ) )" '#,0' "03 Erosion"
 New-Measure $E "Spend on Flat Pairs" `
-    "CALCULATE ( SUM ( PriceErosion[TTMSpend] ), PriceErosion[ErosionCapturePct] < 20 )" '\$#,0' "03 Erosion"
+    "CALCULATE ( SUM ( PriceErosion[TTMSpend] ), KEEPFILTERS ( PriceErosion[ErosionCapturePct] < 20 ) )" '\$#,0' "03 Erosion"
 New-Measure $E "Benchmark Erosion %" @"
 DIVIDE (
     SUMX ( PriceErosion, PriceErosion[BenchmarkErosionPct] * PriceErosion[TTMSpend] ),
@@ -444,9 +458,18 @@ New-Measure $F "Cost per Accepted Unit" "DIVIDE ( [Landed Cost], [Qty Accepted] 
 #    in PartVendor). Without the same restriction, a part this vendor supplied
 #    but had nothing accepted on adds landed cost to the numerator and nothing
 #    to the denominator, inflating the index.
+# 3. Duplicates are excluded with KEEPFILTERS. The earlier
+#    FILTER ( ALL ( POLine[IsDuplicatePO] ), ... ) cleared any outer filter on
+#    that column first, so under a duplicates-only slicer it still scored the
+#    clean lines. ALL ( Dim_Vendor ) below stays plain: clearing the vendor
+#    selection is the whole point of trap 1.
+# 4. The benchmark also clears the BUYER. Who placed an order does not change
+#    the best price any vendor gave Lumen on that part, but POLine carries a
+#    BuyerKey, so under a buyer filter the benchmark became the best vendor THAT
+#    buyer happened to use: BUY-01, BUY-03 and BUY-05 each read exactly 100.00
+#    against true figures of 101.90, 102.66 and 103.95. Dates and POLine
+#    attributes still scope it, so a period is compared with the same period.
 New-Measure $F "Cost Index vs Best" @"
-VAR Clean = FILTER ( ALL ( POLine[IsDuplicatePO] ), POLine[IsDuplicatePO] = FALSE () )
-RETURN
 CALCULATE (
     VAR PartsSupplied = FILTER ( VALUES ( Dim_Part[PartKey] ), [Qty Accepted] > 0 )
     VAR MyCost = SUMX ( PartsSupplied, CALCULATE ( [Landed Cost] ) )
@@ -458,37 +481,46 @@ CALCULATE (
                 MINX (
                     CALCULATETABLE ( VALUES ( Dim_Vendor[VendorKey] ), ALL ( Dim_Vendor ) ),
                     VAR vk = Dim_Vendor[VendorKey]
-                    RETURN CALCULATE ( [Cost per Accepted Unit], ALL ( Dim_Vendor ), Dim_Vendor[VendorKey] = vk )
+                    RETURN CALCULATE ( [Cost per Accepted Unit], ALL ( Dim_Vendor ), Dim_Vendor[VendorKey] = vk, REMOVEFILTERS ( Dim_Buyer ) )
                 )
             RETURN BestOnPart * Acc
         )
     RETURN DIVIDE ( MyCost, BestCost ) * 100,
-    Clean
+    KEEPFILTERS ( POLine[IsDuplicatePO] = FALSE () )
 )
 "@ '0.00' "04 Quality"
 
 New-Measure $F "Duplicate PO Spend" `
-    "CALCULATE ( [Extended Price], POLine[IsDuplicatePO] = TRUE () )" '\$#,0' "04 Quality"
+    "CALCULATE ( [Extended Price], KEEPFILTERS ( POLine[IsDuplicatePO] = TRUE () ) )" '\$#,0' "04 Quality"
 New-Measure $F "Duplicate PO Lines" `
-    "CALCULATE ( COUNTROWS ( POLine ), POLine[IsDuplicatePO] = TRUE () )" '#,0' "04 Quality"
+    "CALCULATE ( COUNTROWS ( POLine ), KEEPFILTERS ( POLine[IsDuplicatePO] = TRUE () ) )" '#,0' "04 Quality"
 
 # --- Delivery -------------------------------------------------------------
-New-Measure $F "Receipts Booked" "CALCULATE ( COUNTROWS ( POLine ), POLine[IsReceived] = TRUE () )" '#,0' "05 Delivery"
+New-Measure $F "Receipts Booked" "CALCULATE ( COUNTROWS ( POLine ), KEEPFILTERS ( POLine[IsReceived] = TRUE () ) )" '#,0' "05 Delivery"
 New-Measure $F "On Time Receipts" `
-    "CALCULATE ( COUNTROWS ( POLine ), POLine[IsOnTime] = TRUE (), POLine[IsReceived] = TRUE () )" '#,0' "05 Delivery"
-New-Measure $F "On Time Delivery %" "DIVIDE ( [On Time Receipts], [Receipts Booked] ) * 100" '0.00' "05 Delivery"
+    "CALCULATE ( COUNTROWS ( POLine ), KEEPFILTERS ( POLine[IsOnTime] = TRUE () ), KEEPFILTERS ( POLine[IsReceived] = TRUE () ) )" '#,0' "05 Delivery"
+New-Measure $F "On Time Delivery %" "DIVIDE ( [On Time Receipts] + 0, [Receipts Booked] ) * 100" '0.00' "05 Delivery"
 New-Measure $F "Avg Days Late" `
-    "CALCULATE ( AVERAGE ( POLine[DaysLate] ), POLine[IsReceived] = TRUE () )" '0.0' "05 Delivery"
+    "CALCULATE ( AVERAGE ( POLine[DaysLate] ), KEEPFILTERS ( POLine[IsReceived] = TRUE () ) )" '0.0' "05 Delivery"
 New-Measure $F "Expedite Spend %" "DIVIDE ( [Expedite Fees], [Extended Price] ) * 100" '0.00' "05 Delivery"
 
 # --- Leverage and concentration -------------------------------------------
 New-Measure $F "Single Source Spend %" `
-    "DIVIDE ( CALCULATE ( [Extended Price], Dim_Part[IsSingleSource] = TRUE () ), [Extended Price] ) * 100" `
+    "DIVIDE ( CALCULATE ( [Extended Price], KEEPFILTERS ( Dim_Part[IsSingleSource] = TRUE () ) ) + 0, [Extended Price] ) * 100" `
     '0.00' "06 Leverage"
+# Concentration needs more than five vendors to mean anything: with five or
+# fewer in context the share is 100% by construction, and its status read Red
+# for a single vendor. Only vendors WITH spend count -- Dim_Vendor is not
+# filtered by POLine, so VALUES ( Dim_Vendor ) alone lists all 36 under any
+# category filter. Just above five the share still has a floor of 500 / N %
+# (83.3% for six vendors, 71.4% for seven), above the 70 warning line, so under
+# a filter that narrow the status is Red whatever the buying. The value is still
+# true; the target is set for the whole vendor base.
 New-Measure $F "Top 5 Vendor Share %" @"
 VAR VendorSpend = ADDCOLUMNS ( VALUES ( Dim_Vendor[VendorKey] ), "@Spend", [Extended Price] )
-VAR Top5 = TOPN ( 5, VendorSpend, [@Spend], DESC )
-RETURN DIVIDE ( SUMX ( Top5, [@Spend] ), SUMX ( VendorSpend, [@Spend] ) ) * 100
+VAR Active = FILTER ( VendorSpend, NOT ISBLANK ( [@Spend] ) )
+VAR Top5 = TOPN ( 5, Active, [@Spend], DESC )
+RETURN IF ( COUNTROWS ( Active ) <= 5, BLANK (), DIVIDE ( SUMX ( Top5, [@Spend] ), SUMX ( Active, [@Spend] ) ) * 100 )
 "@ '0.00' "06 Leverage"
 
 # Identical weights to the SQL implementation, deliberately. If the two ever
@@ -500,22 +532,38 @@ VAR QualMonths = SELECTEDVALUE ( Dim_Part[QualificationMonths] )
 VAR RevShare   = SELECTEDVALUE ( Dim_Vendor[LumenRevenueSharePct] )
 VAR OffContract = SUM ( RenegotiationQueue[OffContractSpend] )
 RETURN
-      SWITCH ( TRUE (), Sources >= 3, 40, Sources = 2, 26, 4 )
-    + SWITCH ( TRUE (), QualMonths <= 2, 20, QualMonths <= 5, 13, QualMonths <= 8, 6, 0 )
-    + SWITCH ( TRUE (), RevShare >= 15, 30, RevShare >= 8, 20, RevShare >= 4, 11, 3 )
-    + IF ( OffContract > 0, 10, 6 )
+    -- A score belongs to ONE part-vendor pair on the queue. At a total, or for
+    -- a pair not on it, the SELECTEDVALUEs are BLANK and BLANK <= 2 is TRUE, so
+    -- this used to invent a score (33 or 37) for rows that have none.
+    IF (
+        ISEMPTY ( RenegotiationQueue ) || NOT HASONEVALUE ( Dim_Part[PartKey] ) || NOT HASONEVALUE ( Dim_Vendor[VendorKey] ),
+        BLANK (),
+          SWITCH ( TRUE (), Sources >= 3, 40, Sources = 2, 26, 4 )
+        + SWITCH ( TRUE (), QualMonths <= 2, 20, QualMonths <= 5, 13, QualMonths <= 8, 6, 0 )
+        + SWITCH ( TRUE (), RevShare >= 15, 30, RevShare >= 8, 20, RevShare >= 4, 11, 3 )
+        + IF ( OffContract > 0, 10, 6 )
+    )
 "@ '0.0' "06 Leverage"
 
 # --- Queue ----------------------------------------------------------------
 New-Measure $Q "Queue Opportunity" "SUM ( RenegotiationQueue[AnnualOpportunity] )" '\$#,0' "07 Queue"
 New-Measure $Q "Queue Pairs" "COUNTROWS ( RenegotiationQueue )" '#,0' "07 Queue"
 New-Measure $Q "This Quarter Pairs" `
-    "CALCULATE ( COUNTROWS ( RenegotiationQueue ), RenegotiationQueue[IsThisQuarter] = TRUE () )" '#,0' "07 Queue"
+    "CALCULATE ( COUNTROWS ( RenegotiationQueue ), KEEPFILTERS ( RenegotiationQueue[IsThisQuarter] = TRUE () ) )" '#,0' "07 Queue"
 New-Measure $Q "This Quarter Opportunity" `
-    "CALCULATE ( SUM ( RenegotiationQueue[AnnualOpportunity] ), RenegotiationQueue[IsThisQuarter] = TRUE () )" `
+    "CALCULATE ( SUM ( RenegotiationQueue[AnnualOpportunity] ), KEEPFILTERS ( RenegotiationQueue[IsThisQuarter] = TRUE () ) )" `
     '\$#,0' "07 Queue"
-New-Measure $Q "Quarter Coverage %" `
-    "DIVIDE ( [This Quarter Opportunity], [Queue Opportunity] ) * 100" '0.0' "07 Queue"
+# The share of the WHOLE queue that this quarter covers, whatever a slicer on
+# IsThisQuarter says: with the slicer on True the old ratio compared this
+# quarter with itself and read 100.0. The numerator's filter stays plain on
+# purpose, and the denominator clears that one column. "+ 0": a vendor with
+# queued pairs but none this quarter is covered 0.0%, not blank.
+New-Measure $Q "Quarter Coverage %" @"
+DIVIDE (
+    CALCULATE ( [Queue Opportunity], RenegotiationQueue[IsThisQuarter] = TRUE () ) + 0,
+    CALCULATE ( [Queue Opportunity], REMOVEFILTERS ( RenegotiationQueue[IsThisQuarter] ) )
+) * 100
+"@ '0.0' "07 Queue"
 
 # --- Trailing twelve months -----------------------------------------------
 #
@@ -575,19 +623,27 @@ $ragMetrics = @(
 foreach ($r in $ragMetrics) {
     $label = $r[0]; $metric = $r[1]; $val = $r[2]; $dir = $r[3]; $tbl = $r[4]
     $cmp = if ($dir -eq "H") { "V >= T, ""#C6EFCE"", V >= W, ""#FFEB9C""" } else { "V <= T, ""#C6EFCE"", V <= W, ""#FFEB9C""" }
+    # BLANK means "nothing to measure here" (the ratios carry + 0 so a genuine
+    # 0% is not BLANK). DAX compares BLANK as 0, so without the guard a vendor
+    # with no spend read Green on lower-is-better metrics and Red on the rest.
+    # Thresholds clear every filter on Ref_SpendTargets first: LOOKUPVALUE
+    # respected them, so a filter on that table could blank a threshold.
+    $targets = @"
+VAR T = CALCULATE ( VALUES ( Ref_SpendTargets[TargetValue] ),  REMOVEFILTERS ( Ref_SpendTargets ), Ref_SpendTargets[MetricName] = "$metric" )
+VAR W = CALCULATE ( VALUES ( Ref_SpendTargets[WarningValue] ), REMOVEFILTERS ( Ref_SpendTargets ), Ref_SpendTargets[MetricName] = "$metric" )
+"@
     New-Measure $tbl "$label Colour" @"
 VAR V = $val
-VAR T = LOOKUPVALUE ( Ref_SpendTargets[TargetValue],  Ref_SpendTargets[MetricName], "$metric" )
-VAR W = LOOKUPVALUE ( Ref_SpendTargets[WarningValue], Ref_SpendTargets[MetricName], "$metric" )
-RETURN SWITCH ( TRUE (), $cmp, "#FFC7CE" )
+$targets
+RETURN IF ( ISBLANK ( V ) || ISBLANK ( T ) || ISBLANK ( W ), BLANK (), SWITCH ( TRUE (), $cmp, "#FFC7CE" ) )
 "@ $null "08 Status"
     New-Measure $tbl "$label Status" @"
 VAR V = $val
-VAR T = LOOKUPVALUE ( Ref_SpendTargets[TargetValue],  Ref_SpendTargets[MetricName], "$metric" )
-VAR W = LOOKUPVALUE ( Ref_SpendTargets[WarningValue], Ref_SpendTargets[MetricName], "$metric" )
-RETURN SWITCH ( TRUE (), $(if ($dir -eq "H") { "V >= T, ""Green"", V >= W, ""Amber""" } else { "V <= T, ""Green"", V <= W, ""Amber""" }), "Red" )
+$targets
+RETURN IF ( ISBLANK ( V ) || ISBLANK ( T ) || ISBLANK ( W ), BLANK (), SWITCH ( TRUE (), $(if ($dir -eq "H") { "V >= T, ""Green"", V >= W, ""Amber""" } else { "V <= T, ""Green"", V <= W, ""Amber""" }), "Red" ) )
 "@ $null "08 Status"
 }
+# ---- MEASURES END
 
 $model.SaveChanges() | Out-Null
 $measureCount = ($model.Tables | ForEach-Object { $_.Measures.Count } | Measure-Object -Sum).Sum

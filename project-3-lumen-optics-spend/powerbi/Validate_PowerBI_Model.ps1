@@ -215,6 +215,137 @@ if ($idxFail -eq 0) {
     Write-Host ("  {0,-34} {1,18}  <>  {2,-18} MISMATCH" -f "Cost index -- all $($vendors.Count) vendors", "$idxFail wrong", "$idxPass right") -ForegroundColor Red
 }
 
+# --- the same index, per BUYER ---------------------------------------------------
+# The benchmark is the best cost any vendor gave Lumen on a part, whoever placed
+# the order. POLine carries a BuyerKey, so a benchmark that kept the buyer filter
+# became the best vendor THAT buyer used: BUY-01, BUY-03 and BUY-05 read exactly
+# 100.00. The per-vendor check above runs with no buyer filter and cannot see
+# it. This SQL mirrors the measure under a buyer filter: the buyer's own clean
+# lines, each part priced at the Lumen-wide best (fn_VendorScorecard's PartBest).
+$buyerIdx = @()
+$cn = New-Object System.Data.SqlClient.SqlConnection("Server=$SqlServerInst;Database=$SqlDb;Integrated Security=True;")
+$cn.Open()
+try {
+    $cmd = $cn.CreateCommand()
+    $cmd.CommandText = @"
+WITH C AS (
+    SELECT c.* FROM dbo.fn_POLineCost('$AsOf') c
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.fn_DuplicatePOLines('$AsOf') d WHERE d.POLineKey = c.POLineKey)
+),
+PV AS (
+    SELECT PartKey, VendorKey, CPA = SUM(LandedCost) / NULLIF(SUM(ISNULL(QtyAccepted, 0)), 0)
+    FROM C GROUP BY PartKey, VendorKey HAVING SUM(ISNULL(QtyAccepted, 0)) > 0
+),
+PB AS (SELECT PartKey, BestCPA = MIN(CPA) FROM PV GROUP BY PartKey),
+BP AS (
+    SELECT BuyerKey, PartKey, Landed = SUM(LandedCost), Acc = SUM(ISNULL(QtyAccepted, 0))
+    FROM C GROUP BY BuyerKey, PartKey HAVING SUM(ISNULL(QtyAccepted, 0)) > 0
+)
+SELECT b.BuyerID, 100.0 * SUM(bp.Landed) / SUM(pb.BestCPA * bp.Acc)
+FROM BP bp
+JOIN PB pb ON pb.PartKey = bp.PartKey
+JOIN dbo.Dim_Buyer b ON b.BuyerKey = bp.BuyerKey
+GROUP BY b.BuyerID ORDER BY b.BuyerID;
+"@
+    $rdr = $cmd.ExecuteReader()
+    while ($rdr.Read()) { $buyerIdx += @{ Id = [string]$rdr[0]; Idx = [double]$rdr[1] } }
+    $rdr.Close()
+} finally { $cn.Close() }
+
+$bIdxFail = 0; $bWorst = 0.0
+foreach ($b in $buyerIdx) {
+    $daxIdx = Get-Dax "CALCULATE ( [Cost Index vs Best], Dim_Buyer[BuyerID] = ""$($b.Id)"" )"
+    if ($null -eq $daxIdx) { $bIdxFail++; $failures += "Cost index $($b.Id): Power BI returned blank"; continue }
+    $d = [math]::Round($daxIdx, 2); $s = [math]::Round($b.Idx, 2)
+    $delta = [math]::Abs($d - $s)
+    if ($delta -gt $bWorst) { $bWorst = $delta }
+    if ($delta -gt 0.01) { $bIdxFail++; $failures += ("Cost index {0}: Power BI {1} vs SQL {2}" -f $b.Id, $d, $s) }
+}
+if ($buyerIdx.Count -gt 0 -and $bIdxFail -eq 0) {
+    $pass++
+    Write-Host ("  {0,-34} {1,18}  ==  {2,-18} MATCH" -f "Cost index -- all $($buyerIdx.Count) buyers", "max delta", $bWorst.ToString("N4")) -ForegroundColor Green
+} else {
+    $fail++
+    if ($buyerIdx.Count -eq 0) { $failures += "Cost index per buyer: SQL returned no buyers" }
+    Write-Host ("  {0,-34} {1,18}  <>  {2,-18} MISMATCH" -f "Cost index -- all $($buyerIdx.Count) buyers", "$bIdxFail wrong", "") -ForegroundColor Red
+}
+
+# --- the renegotiation queue, reconciled PER BUYER -----------------------------
+# The totals above cannot see a pair moved from one buyer to another: the queue's
+# pair count and value stay the same. That is how the committed .pbix went stale
+# after the sweep's PrimaryBuyer fix -- one pair still sat with BUY-03 and 91
+# buyer ranks had moved. There the this-quarter total happened to move as well,
+# but a move that leaves the this-quarter set alone passes every total. So every
+# buyer's pair count and this-quarter value must match SQL.
+$buyers = @()
+$cn = New-Object System.Data.SqlClient.SqlConnection("Server=$SqlServerInst;Database=$SqlDb;Integrated Security=True;")
+$cn.Open()
+try {
+    $cmd = $cn.CreateCommand()
+    $cmd.CommandText = "SELECT b.BuyerID, COUNT(q.BuyerID), SUM(CASE WHEN q.IsThisQuarter = 1 THEN q.AnnualOpportunity ELSE 0 END) FROM dbo.Dim_Buyer b LEFT JOIN dbo.vw_RenegotiationQueue q ON q.BuyerID = b.BuyerID GROUP BY b.BuyerID ORDER BY b.BuyerID;"
+    $rdr = $cmd.ExecuteReader()
+    while ($rdr.Read()) {
+        $buyers += @{ Id = [string]$rdr[0]; Pairs = [double]$rdr[1]; Opp = $(if ($rdr[2] -is [System.DBNull]) { 0.0 } else { [double]$rdr[2] }) }
+    }
+    $rdr.Close()
+} finally { $cn.Close() }
+
+$buyerFail = 0
+foreach ($b in $buyers) {
+    $daxPairs = Get-Dax "CALCULATE ( [Queue Pairs] + 0, Dim_Buyer[BuyerID] = ""$($b.Id)"" )"
+    $daxOpp   = Get-Dax "CALCULATE ( [This Quarter Opportunity] + 0, Dim_Buyer[BuyerID] = ""$($b.Id)"" )"
+    if ([math]::Round($daxPairs, 0) -ne [math]::Round($b.Pairs, 0) -or [math]::Abs([math]::Round($daxOpp, 2) - [math]::Round($b.Opp, 2)) -gt 0.005) {
+        $buyerFail++
+        $failures += ("Queue for {0}: Power BI {1} pairs / {2:N2} this quarter vs SQL {3} / {4:N2}" -f $b.Id, $daxPairs, $daxOpp, $b.Pairs, $b.Opp)
+    }
+}
+if ($buyerFail -eq 0) {
+    $pass++
+    Write-Host ("  {0,-34} {1,18}  ==  {2,-18} MATCH" -f "Queue -- per buyer ($($buyers.Count))", "pairs + value", "all equal") -ForegroundColor Green
+} else {
+    $fail++
+    Write-Host ("  {0,-34} {1,18}  <>  {2,-18} MISMATCH" -f "Queue -- per buyer ($($buyers.Count))", "$buyerFail wrong", "of $($buyers.Count)") -ForegroundColor Red
+}
+
+# --- the renegotiation queue, ROW BY ROW -----------------------------------------
+# Page 3 is a table sorted by PriorityRank. Ranks can move with every total and
+# every per-buyer figure above unchanged: 19 pairs have zero opportunity, and
+# their order rests on a tie-break alone. So every row the model holds must be a
+# row SQL returns, with the same ranks, buyer, action, flag and value.
+function Get-RowKey($r) {
+    "{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7:F2}" -f [long]$r[0], [long]$r[1], [long]$r[2], [long]$r[3], [long]$r[4],
+        [string]$r[5], [int][bool]$r[6], [double]$r[7]
+}
+$daxRows = New-Object System.Collections.Generic.List[string]
+$cmd = $cnDax.CreateCommand()
+$cmd.CommandText = "EVALUATE SELECTCOLUMNS ( RenegotiationQueue, ""r"", RenegotiationQueue[PriorityRank], ""br"", RenegotiationQueue[BuyerRank], ""p"", RenegotiationQueue[PartKey], ""v"", RenegotiationQueue[VendorKey], ""b"", RenegotiationQueue[BuyerKey], ""a"", RenegotiationQueue[ActionCode], ""q"", RenegotiationQueue[IsThisQuarter], ""o"", RenegotiationQueue[AnnualOpportunity] )"
+$rdr = $cmd.ExecuteReader()
+try { while ($rdr.Read()) { $daxRows.Add((Get-RowKey $rdr)) } } finally { $rdr.Close() }
+
+$sqlRows = New-Object System.Collections.Generic.List[string]
+$cn = New-Object System.Data.SqlClient.SqlConnection("Server=$SqlServerInst;Database=$SqlDb;Integrated Security=True;")
+$cn.Open()
+try {
+    $cmd = $cn.CreateCommand()
+    $cmd.CommandText = "SELECT q.PriorityRank, q.BuyerRank, p.PartKey, v.VendorKey, b.BuyerKey, q.ActionCode, q.IsThisQuarter, q.AnnualOpportunity FROM dbo.fn_RenegotiationQueue('$AsOf', 8) q JOIN dbo.Dim_Part p ON p.PartNumber = q.PartNumber JOIN dbo.Dim_Vendor v ON v.VendorID = q.VendorID JOIN dbo.Dim_Buyer b ON b.BuyerID = q.BuyerID;"
+    $rdr = $cmd.ExecuteReader()
+    while ($rdr.Read()) { $sqlRows.Add((Get-RowKey $rdr)) }
+    $rdr.Close()
+} finally { $cn.Close() }
+
+$onlyDax = @($daxRows | Where-Object { -not $sqlRows.Contains($_) })
+$onlySql = @($sqlRows | Where-Object { -not $daxRows.Contains($_) })
+if ($sqlRows.Count -gt 0 -and $daxRows.Count -eq $sqlRows.Count -and $onlyDax.Count -eq 0 -and $onlySql.Count -eq 0) {
+    $pass++
+    Write-Host ("  {0,-34} {1,18}  ==  {2,-18} MATCH" -f "Queue -- every row ($($sqlRows.Count))", "$($daxRows.Count) rows", "identical") -ForegroundColor Green
+} else {
+    $fail++
+    $failures += ("Queue rows: Power BI {0} vs SQL {1}; {2} only in Power BI, {3} only in SQL (rank|buyer rank|part|vendor|buyer|action|this quarter|value){4}" -f
+        $daxRows.Count, $sqlRows.Count, $onlyDax.Count, $onlySql.Count,
+        $(if ($onlyDax.Count) { "; first Power BI-only row: " + $onlyDax[0] } else { "" }))
+    Write-Host ("  {0,-34} {1,18}  <>  {2,-18} MISMATCH" -f "Queue -- every row ($($sqlRows.Count))", "$($onlyDax.Count + $onlySql.Count) differ", "") -ForegroundColor Red
+}
+
 $cnDax.Close()
 Write-Host ("-" * 92)
 if ($fail -eq 0) {

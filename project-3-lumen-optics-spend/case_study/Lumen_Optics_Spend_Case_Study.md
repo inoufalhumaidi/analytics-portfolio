@@ -184,12 +184,12 @@ report.
 185 vendor–part pairs is not a plan. A category manager can run perhaps eight serious negotiations
 a quarter, so the queue stays complete for audit and marks what is actually workable.
 
-**43 pairs this quarter, carrying 65.6% of the $4.05M opportunity.**
+**43 pairs this quarter, carrying 66.1% of the $4.05M opportunity.**
 
 | Action | Pairs | Opportunity | Spend (12m) | This quarter |
 |---|---:|---:|---:|---:|
-| `RENEGOTIATE` | 54 | $1,631,840 | $16,221,031 | 16 |
-| `PUT_ON_CONTRACT` | 48 | $1,623,978 | $11,559,724 | 19 |
+| `RENEGOTIATE` | 54 | $1,631,840 | $16,221,031 | 15 |
+| `PUT_ON_CONTRACT` | 48 | $1,623,978 | $11,559,724 | 20 |
 | `DUAL_SOURCE` | 8 | $515,330 | $4,652,024 | 8 |
 | `ACCEPT` | 73 | $276,461 | $10,320,429 | 0 |
 | `FIX_QUALITY` | 2 | — | $1,106,723 | 0 |
@@ -213,7 +213,7 @@ Four design decisions are worth naming:
 
 | # | Recommendation | Owner | Basis | Value |
 |---|---|---|---|---|
-| **1** | **Work the quarter's 43 pairs**, starting with the 19 `PUT_ON_CONTRACT` | Category managers | 43 pairs carry 65.6% of the total gap | **$2,657,185** of the $4.05M |
+| **1** | **Work the quarter's 43 pairs**, starting with the 20 `PUT_ON_CONTRACT` | Category managers | 43 pairs carry 66.1% of the total gap | **$2,673,946** of the $4.05M |
 | **2** | **Re-paper the lapsed agreements** before negotiating anything on them | Sourcing ops | 27.09% of spend has no agreement in force | Unlocks **$1,623,978** that cannot be negotiated today |
 | **3** | **Add erosion capture to the monthly pack**, beside purchase price variance | CPO | PPV reads −0.19% Green while $4.05M walks out | Makes the invisible loss visible monthly |
 | **4** | **Move the laser diode volume off VEN-004** on shared parts | Optoelectronics | Cheapest per unit, dearest per *accepted* unit on every shared part | Part of the **$1,571,168** of unusable material |
@@ -360,4 +360,4 @@ dataset byte for byte, and UAT-20 asserts the fingerprints.
 | Value already ahead of the curve (not netted) | −$249,429 |
 | Material paid for and unusable | $1,571,168 |
 | Vendor–part pairs assessed | 185 |
-| **Workable this quarter** | **43 (65.6% of the gap)** |
+| **Workable this quarter** | **43 (66.1% of the gap)** |

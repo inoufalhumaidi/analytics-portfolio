@@ -33,7 +33,7 @@ rather than take it.
 | **BR-07** | Compare suppliers on cost per USABLE unit, not unit price | Category managers | M | `CostPerAcceptedUnit`; `CostIndexVsBest` in `fn_VendorScorecard` | UAT-12 | VEN-004 cheapest per unit on LOM-0072 and **dearest per accepted unit** |
 | **BR-08** | Produce a ranked worklist of which supplier-part pair to renegotiate first | CPO | M | `fn_RenegotiationQueue(@AsOf, @PerBuyer)` | UAT-08, 09, 10 | **185** pairs ranked; **43** workable this quarter |
 | **BR-09** | Decide the ACTION by leverage, not only by value | Category managers | M | `LeverageScore` + the `ActionCode` ladder | UAT-08 | 5 action types; sole-source routed to `DUAL_SOURCE` |
-| **BR-10** | Bound the worklist to what a category manager can actually run | CPO | M | `IsThisQuarter`, `BuyerRank`, `@NegotiationsPerBuyer` | UAT-10 | 43 pairs covering **65.6%** of the gap |
+| **BR-10** | Bound the worklist to what a category manager can actually run | CPO | M | `IsThisQuarter`, `BuyerRank`, `@NegotiationsPerBuyer` | UAT-10 | 43 pairs covering **66.1%** of the gap |
 | **BR-11** | Assign each negotiation to the person who actually buys the part | Sourcing ops | S | Spend-weighted `PrimaryBuyer` in the queue | UAT-11 | 0 mismatches across 185 pairs |
 | **BR-12** | Say plainly where there is no leverage and no case for creating any | Category managers | S | `ACCEPT` action with a written reason | UAT-09 | 73 pairs / $276,461, largest single $30,142 |
 | **BR-13** | Separate quality loss from price loss | Supplier quality | S | `FIX_QUALITY` action; `RejectedValue`; reject attribution | UAT-08 | **$1,571,168** of material paid for and unusable |
@@ -122,7 +122,7 @@ rounding fix.
 |---|---|---|---|
 | **NFR-01** | Any consumer can query without knowing the internals | Seven `@AsOf`-parameterised procedures | `sql/06` |
 | **NFR-02** | No SQL injection surface | `@GroupBy` resolved by `CASE`, never concatenated | `usp_CategorySummary` raises on `'DROP TABLE'` (UAT-14) |
-| **NFR-03** | Thresholds defined once | `Ref_SpendTargets` read by SQL, DAX `LOOKUPVALUE` and Excel `INDEX/MATCH` | Changing a target changes the status in all three |
+| **NFR-03** | Thresholds defined once | `Ref_SpendTargets` read by SQL, DAX (`CALCULATE` over `REMOVEFILTERS ( Ref_SpendTargets )`, so no report filter moves a threshold) and Excel `INDEX/MATCH` | Changing a target changes the status in all three |
 | **NFR-04** | The benchmark assumption is visible and challengeable | `Ref_PriceErosionBenchmark` with a `SourceNote` per row | 8 categories, each with provenance |
 | **NFR-05** | Workbook opens on Excel 2019 and LibreOffice | No `FILTER`/`SORT`/`UNIQUE` | `excel/Build_Workbook.ps1` header |
 | **NFR-06** | Workbook survives relocation | Power Query resolves its folder from a named cell | `SourceFolder` on Control |
