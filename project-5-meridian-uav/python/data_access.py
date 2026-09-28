@@ -44,8 +44,32 @@ DATABASE = "MeridianUAV"
 # that stands in for it. Keeping the pair together is what stops the two
 # drifting: a query changed without its extract is visible here.
 SOURCES: dict[str, tuple[str, str]] = {
+    # The SAME query Export_Extracts.ps1 writes, rounding and all. Narrowing the
+    # decimals is a modelling decision (the sensor does not resolve a fourth
+    # digit, and a model fitted on it fits the generator's arithmetic), so it has
+    # to hold for the model whichever source it reads. This form used to be
+    # SELECT * at full precision: the published model was trained on the very
+    # digits the extract says not to trust, and the two sources gave different
+    # figures. validate_app.py compares the two to 4 decimals, so the query and
+    # the export cannot drift apart unnoticed.
     "sensor_features": (
-        "SELECT * FROM dbo.vw_SensorFeatures",
+        """SELECT InstallKey, ComponentSerial, ComponentCode, LeadTimeFlightHours, TailNumber, BaseCode,
+                  SortieDate, SortieSeq,
+                  FlightHours = CAST(FlightHours AS DECIMAL(9,3)),
+                  StressHours = CAST(StressHours AS DECIMAL(9,3)),
+                  VibrationRms, TempRiseC, CurrentDrawA,
+                  FlightHoursSoFar = CAST(FlightHoursSoFar AS DECIMAL(9,2)),
+                  StressHoursSoFar = CAST(StressHoursSoFar AS DECIMAL(9,2)),
+                  VibRoll10  = CAST(VibRoll10  AS DECIMAL(8,3)),
+                  TempRoll10 = CAST(TempRoll10 AS DECIMAL(8,2)),
+                  CurrRoll10 = CAST(CurrRoll10 AS DECIMAL(8,3)),
+                  VibVsBaseline  = CAST(VibVsBaseline  AS DECIMAL(8,3)),
+                  TempVsBaseline = CAST(TempVsBaseline AS DECIMAL(8,3)),
+                  RemovalReason, RemovedDate,
+                  CAST(IsFailureInstall AS INT) AS IsFailureInstall,
+                  FlightHoursToRemoval = CAST(FlightHoursToRemoval AS DECIMAL(9,2)),
+                  StressHoursToRemoval = CAST(StressHoursToRemoval AS DECIMAL(9,2))
+           FROM dbo.vw_SensorFeatures ORDER BY ComponentSerial, SortieSeq""",
         "sensor_features.csv.gz",
     ),
     "component_life": (

@@ -136,19 +136,21 @@ hardware does not change. The telemetry does not change. One number per componen
 
 The obvious objection is that the information does not exist early enough, and no threshold can
 create it. That was tested rather than assumed, by fitting three models over the same test
-components:
+components. Their features enter at the resolution the sensors actually have (two or three
+decimals), not the generator's full precision, so no model can learn from digits a real instrument
+would never report:
 
 | Inputs | AUC | Precision | **Actionable** | Median warning |
 |---|---:|---:|---:|---:|
-| **Telemetry only** — vibration, temperature, current | 0.9783 | 75.63% | **91.11%** | 26.82 h |
-| **Exposure only** — accrued stress, stress ratio | 0.6775 | *never reaches 75%* | — | — |
-| **Both** | 0.9986 | 84.91% | **100%** | 43.92 h |
+| **Telemetry only** — vibration, temperature, current | 0.9781 | 75.63% | **92.22%** | 26.85 h |
+| **Exposure only** — accrued stress, stress ratio | 0.6798 | *never reaches 75%* | — | — |
+| **Both** | 0.9986 | 85.71% | **100%** | 43.50 h |
 | *Deployed fixed 3.40× threshold* | — | 77.39% | **38.20%** | 13.18 h |
 
 Two things follow.
 
 **The warning is in the data.** Telemetry alone, read by a model instead of a fixed threshold,
-recovers 91% actionable lead time at essentially the same precision. The deployed rule discards it.
+recovers 92% actionable lead time at essentially the same precision. The deployed rule discards it.
 
 **The stress model is not a substitute for condition monitoring.** Exposure features alone —
 Finding 1's variables — cannot reach the precision floor at any threshold. The two findings are about

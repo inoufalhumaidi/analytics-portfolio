@@ -101,23 +101,12 @@ Now every value the extract carries is compared with SQL, and without SQL
 Server the comparison is reported as NOT RUN, and not counted.
 """
 
-# How closely an extract must match SQL, per column. Every extract carries full
-# precision EXCEPT the sensor_features columns Export_Extracts.ps1 deliberately
-# narrows (a modelling decision documented there). Each tolerance is half a unit
-# in the last decimal the extract keeps: the most that rounding can move it. A
-# single 0.005 for the whole dataset let a 0.004 drift through in columns the
-# extract never rounds at all.
+# How closely an extract must match SQL: to 4 decimals, for EVERY dataset.
+# sensor_features once needed wider, per-column tolerances because its extract
+# rounded features that its SQL form did not. Both now run the same rounded
+# query (the rounding is a modelling decision, see data_access.py), so a
+# difference beyond the fourth decimal is drift, whichever column it is in.
 DEFAULT_TOLERANCE = 5e-5
-ROUNDED_IN_EXTRACT = {
-    "sensor_features": {
-        # CAST(... AS DECIMAL(x,3))
-        "FlightHours": 0.0005, "StressHours": 0.0005, "VibRoll10": 0.0005,
-        "CurrRoll10": 0.0005, "VibVsBaseline": 0.0005, "TempVsBaseline": 0.0005,
-        # CAST(... AS DECIMAL(x,2))
-        "FlightHoursSoFar": 0.005, "StressHoursSoFar": 0.005, "TempRoll10": 0.005,
-        "FlightHoursToRemoval": 0.005, "StressHoursToRemoval": 0.005,
-    },
-}
 
 
 # Columns a SQL form returns that its extract deliberately does not carry:
@@ -137,9 +126,6 @@ NOT_EXTRACTED = {
     "component_wear": {"AsOfDate", "ComponentTypeKey", "AirframeKey", "BaseKey",
                        "AirframeStatus", "IsInFleetAsOf", "WeibullShape"},
     "dq_findings": {"FindingKey", "EntityKey", "AirframeKey"},
-    # ReadingKey and SortieKey are on the model's LEAKING_COLUMNS list: it
-    # asserts they are never features, so their absence cannot change it.
-    "sensor_features": {"ReadingKey", "SortieKey", "AirframeKey"},
     "threshold_recommendation": {"AsOfDate", "MinPrecisionPct", "Population", "Failures",
                                  "AlertsRaised", "TP", "FP", "FN", "ActionableTP", "LateTP"},
 }
@@ -300,22 +286,22 @@ def frames_agree(name: str, sql: pd.DataFrame, csv: pd.DataFrame) -> tuple[bool,
         return False, detail
 
     # Within a group of rows sharing every key, sort the decimals on their
-    # tolerance grid FIRST: the extract may have rounded two distinct SQL
-    # values into a tie, and then the next column would decide the order on
-    # one side only. The raw values break any tie that remains.
+    # tolerance grid FIRST: two values that agree within the tolerance may
+    # still differ in their last raw digits, and sorting on those digits could
+    # order the group differently on each side. The raw values break any tie
+    # that remains.
     def ordered(frame):
         keyed = frame.copy()
         grid = []
         for column in decimals:
-            tolerance = ROUNDED_IN_EXTRACT.get(name, {}).get(column, DEFAULT_TOLERANCE)
-            keyed["~" + column] = keyed[column].round(round(-math.log10(2 * tolerance)))
+            keyed["~" + column] = keyed[column].round(round(-math.log10(2 * DEFAULT_TOLERANCE)))
             grid.append("~" + column)
         keyed = keyed.sort_values(keys + grid + decimals, kind="mergesort", na_position="last")
         return keyed[columns].reset_index(drop=True)
 
     a, b = ordered(a), ordered(b)
     for column in decimals:
-        tolerance = ROUNDED_IN_EXTRACT.get(name, {}).get(column, DEFAULT_TOLERANCE)
+        tolerance = DEFAULT_TOLERANCE
         x, y = a[column], b[column]
         bad = ~((x - y).abs().le(tolerance + 1e-9) | (x.isna() & y.isna()))
         if bad.any():

@@ -238,7 +238,7 @@ stress hours = flight hours × profile multiplier
 </tbody></table>
 <p><strong>81 more failures caught early enough to prevent, for six points of fleet precision.</strong> The alarm hardware does not change. The telemetry does not change. One number per component changes.</p>
 <h3>Is the warning actually there, or is the data just late?</h3>
-<p>The obvious objection is that the information does not exist early enough, and no threshold can create it. That was tested rather than assumed, by fitting three models over the same test components:</p>
+<p>The obvious objection is that the information does not exist early enough, and no threshold can create it. That was tested rather than assumed, by fitting three models over the same test components. Their features enter at the resolution the sensors actually have (two or three decimals), not the generator's full precision, so no model can learn from digits a real instrument would never report:</p>
 <table><thead><tr>
 <th style="text-align:left">Inputs</th>
 <th style="text-align:right">AUC</th>
@@ -248,14 +248,14 @@ stress hours = flight hours × profile multiplier
 </tr></thead><tbody>
 <tr>
 <td style="text-align:left"><strong>Telemetry only</strong> — vibration, temperature, current</td>
-<td style="text-align:right">0.9783</td>
+<td style="text-align:right">0.9781</td>
 <td style="text-align:right">75.63%</td>
-<td style="text-align:right"><strong>91.11%</strong></td>
-<td style="text-align:right">26.82 h</td>
+<td style="text-align:right"><strong>92.22%</strong></td>
+<td style="text-align:right">26.85 h</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>Exposure only</strong> — accrued stress, stress ratio</td>
-<td style="text-align:right">0.6775</td>
+<td style="text-align:right">0.6798</td>
 <td style="text-align:right"><em>never reaches 75%</em></td>
 <td style="text-align:right">—</td>
 <td style="text-align:right">—</td>
@@ -263,9 +263,9 @@ stress hours = flight hours × profile multiplier
 <tr>
 <td style="text-align:left"><strong>Both</strong></td>
 <td style="text-align:right">0.9986</td>
-<td style="text-align:right">84.91%</td>
+<td style="text-align:right">85.71%</td>
 <td style="text-align:right"><strong>100%</strong></td>
-<td style="text-align:right">43.92 h</td>
+<td style="text-align:right">43.50 h</td>
 </tr>
 <tr>
 <td style="text-align:left"><em>Deployed fixed 3.40× threshold</em></td>
@@ -276,7 +276,7 @@ stress hours = flight hours × profile multiplier
 </tr>
 </tbody></table>
 <p>Two things follow.</p>
-<p><strong>The warning is in the data.</strong> Telemetry alone, read by a model instead of a fixed threshold, recovers 91% actionable lead time at essentially the same precision. The deployed rule discards it.</p>
+<p><strong>The warning is in the data.</strong> Telemetry alone, read by a model instead of a fixed threshold, recovers 92% actionable lead time at essentially the same precision. The deployed rule discards it.</p>
 <p><strong>The stress model is not a substitute for condition monitoring.</strong> Exposure features alone — Finding 1's variables — cannot reach the precision floor at any threshold. The two findings are about different things and the operator needs both. That is worth stating precisely because the tempting conclusion from Finding 1 is that the stress model makes the telemetry redundant. It does not.</p>
 <hr/>
 <h2>What to do on Monday</h2>

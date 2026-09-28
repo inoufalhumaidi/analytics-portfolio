@@ -76,7 +76,7 @@ takes it to **93.20% actionable at 75.18% precision** — **87 more failures cau
 nothing**. Fleet-wide: **37.81% → 66.43% actionable** for six points of precision.
 
 **Is the warning actually there?** Tested, not assumed. A model over the *same telemetry* reaches
-91.11% actionable at 75.63% precision, so the information exists and the deployed rule discards it.
+92.22% actionable at 75.63% precision, so the information exists and the deployed rule discards it.
 A model over *exposure only* — Finding 1's variables — never reaches the precision floor at any
 threshold, so the stress model is **not** a substitute for condition monitoring. The operator needs
 both.
@@ -194,18 +194,13 @@ Every gate raises rather than printing, so `sqlcmd -b` stops the sequence on fai
 passes at **0.000% against a 3.000% tolerance**.
 
 **Without SQL Server**, `python/data_access.py` falls back to `data_exports/` and prints that it did.
-The model, the app and the workbook all run from the extracts alone. The app, the workbook and the
-alarm reconciliation reproduce exactly. The model reproduces every finding but not every decimal.
-The extract rounds sensor features to two or three decimals (see `Export_Extracts.ps1`), while the
-published figures were fitted on full precision from SQL Server. For example, the telemetry model's
-actionable lead time is 92.22% from the extracts against the published 91.11%, with the same 75.63%
-precision.
-
-The model also sorts its readings by `InstallKey, SortieSeq` before training. Its early-stopping
-holdout is carved from the rows in arrival order, so the same data in another order trains a
-different model. Without the sort, the extract's order alone moved that figure to 93.33%. SQL
-Server returns no guaranteed order without `ORDER BY`, so a rebuilt database could have shifted
-the published headline. It already returned this order, so no published figure changed.
+The model, the app and the workbook all run from the extracts alone, and reproduce exactly: the
+model's outputs are byte-identical whichever source it reads. Both sources run the same query,
+including the extract's rounding of sensor features to two or three decimals. That rounding is a
+modelling decision, because the sensors do not resolve a fourth digit (see `Export_Extracts.ps1`),
+so the published model is trained on the rounded values too. The model also sorts its readings by
+`InstallKey, SortieSeq` before training: its early-stopping holdout is carved from rows in arrival
+order, and SQL Server guarantees no order without `ORDER BY`.
 
 ---
 

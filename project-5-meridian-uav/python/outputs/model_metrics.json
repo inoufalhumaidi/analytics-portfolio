@@ -4,8 +4,8 @@
   "min_precision_pct": 75.0,
   "feature_sets": {
     "telemetry": {
-      "auc": 0.9783,
-      "average_precision": 0.8564,
+      "auc": 0.9781,
+      "average_precision": 0.8562,
       "operating_point": {
         "threshold": 0.8,
         "population": "221",
@@ -15,39 +15,39 @@
         "fp": "29",
         "fn": "0",
         "tn": "102",
-        "actionable_tp": "82",
-        "late_tp": "8",
+        "actionable_tp": "83",
+        "late_tp": "7",
         "precision_pct": 75.63,
         "recall_pct": 100.0,
-        "actionable_lead_time_pct": 91.11,
-        "preventable_failure_pct": 91.11,
-        "median_lead_time_flight_hours": 26.82
+        "actionable_lead_time_pct": 92.22,
+        "preventable_failure_pct": 92.22,
+        "median_lead_time_flight_hours": 26.85
       }
     },
     "exposure": {
-      "auc": 0.6775,
-      "average_precision": 0.184,
+      "auc": 0.6798,
+      "average_precision": 0.1852,
       "operating_point": null
     },
     "both": {
       "auc": 0.9986,
-      "average_precision": 0.9901,
+      "average_precision": 0.99,
       "operating_point": {
         "threshold": 0.05,
         "population": "221",
         "failures": "90",
-        "alerts": "106",
+        "alerts": "105",
         "tp": "90",
-        "fp": "16",
+        "fp": "15",
         "fn": "0",
-        "tn": "115",
+        "tn": "116",
         "actionable_tp": "90",
         "late_tp": "0",
-        "precision_pct": 84.91,
+        "precision_pct": 85.71,
         "recall_pct": 100.0,
         "actionable_lead_time_pct": 100.0,
         "preventable_failure_pct": 100.0,
-        "median_lead_time_flight_hours": 43.92
+        "median_lead_time_flight_hours": 43.5
       }
     }
   },
@@ -95,5 +95,5 @@
     },
     "agree": true
   },
-  "source": "SQL Server localhost\\TEW_SQLEXPRESS/MeridianUAV via SQL Server"
+  "source": "SQL Server localhost\\TEW_SQLEXPRESS/MeridianUAV via ODBC Driver 18 for SQL Server"
 }
