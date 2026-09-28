@@ -30,3 +30,7 @@ venv/
 # The metrics, the threshold sweeps and the three figures ARE committed --
 # those are the deliverable; this is an intermediate.
 project-5-meridian-uav/python/outputs/model_test_scores.csv
+
+# Working notes for resumable multi-session work: plan, log, per-agent progress,
+# reusable verification tools. Local only -- never part of the portfolio.
+.worklog/
