@@ -52,7 +52,7 @@ project-4-talon-robotics/
 │   ├── 05_kpi_views.sql              readiness scorecard, RAID exposure, verification queue
 │   ├── 06_stored_procedures.sql      the reusable interface — 6 procedures, all @AsOf-aware (plus the data-quality gate from 04)
 │   └── 07_uat_test_cases.sql         23 acceptance tests; raises and stops on failure
-├── erp_extracts/                     12 CSVs (2,199 rows) + the script that writes them
+├── erp_extracts/                     12 CSVs (2,199 rows) + the scripts that write and check them
 ├── excel/
 │   ├── Build_Workbook.ps1            builds the control from the extracts
 │   ├── Validate_Workbook.ps1         reopens it, recalculates, reads the values back
@@ -229,6 +229,7 @@ sqlcmd -S <server> -E -d TalonDelivery -i sql/05_kpi_views.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/06_stored_procedures.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/07_uat_test_cases.sql     # expect 23/23
 
+powershell erp_extracts/Validate_Extracts.ps1                           # expect 12/12: the committed CSVs are what SQL produces
 powershell erp_extracts/Export_Extracts.ps1
 powershell excel/Build_Workbook.ps1
 powershell excel/Validate_Workbook.ps1                                  # expect 16/16

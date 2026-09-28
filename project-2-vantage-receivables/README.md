@@ -52,7 +52,7 @@ project-2-vantage-receivables/
 │   ├── 06_dso_bridge.sql             granted-vs-taken, terms shift-share, billing lag, DBT
 │   ├── 07_stored_procedures.sql      the reusable interface — 8 procedures, all @AsOf-aware
 │   └── 08_uat_test_cases.sql         25 acceptance tests; raises and stops on failure
-├── erp_extracts/                     11 CSVs (4,279 rows) + the script that writes them
+├── erp_extracts/                     11 CSVs (4,279 rows) + the scripts that write and check them
 ├── excel/
 │   ├── Build_Workbook.ps1            builds the workbook from the extracts
 │   ├── Validate_Workbook.ps1         opens it, recalculates, reads the values back
@@ -197,6 +197,7 @@ sqlcmd -S <server> -E -d VantageAR -i sql/06_dso_bridge.sql
 sqlcmd -S <server> -E -d VantageAR -i sql/07_stored_procedures.sql
 sqlcmd -S <server> -E -d VantageAR -i sql/08_uat_test_cases.sql     # expect 25/25
 
+powershell erp_extracts/Validate_Extracts.ps1                       # expect 11/11: the committed CSVs are what SQL produces
 powershell erp_extracts/Export_Extracts.ps1
 powershell excel/Build_Workbook.ps1
 powershell excel/Validate_Workbook.ps1                              # expect 27/27

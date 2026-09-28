@@ -56,7 +56,7 @@ project-3-lumen-optics-spend/
 │   ├── 05_kpi_views.sql              the erosion model, vendor scorecard and renegotiation queue
 │   ├── 06_stored_procedures.sql      the reusable interface — 7 procedures, all @AsOf-aware
 │   └── 07_uat_test_cases.sql         21 acceptance tests; raises and stops on failure
-├── erp_extracts/                     11 CSVs (6,803 rows) + the script that writes them
+├── erp_extracts/                     11 CSVs (6,803 rows) + the scripts that write and check them
 ├── excel/
 │   ├── Build_Workbook.ps1            builds the workbook from the extracts
 │   ├── Validate_Workbook.ps1         opens it, recalculates, reads the values back
@@ -219,6 +219,7 @@ sqlcmd -S <server> -E -d LumenSpend -i sql/05_kpi_views.sql
 sqlcmd -S <server> -E -d LumenSpend -i sql/06_stored_procedures.sql
 sqlcmd -S <server> -E -d LumenSpend -i sql/07_uat_test_cases.sql     # expect 21/21
 
+powershell erp_extracts/Validate_Extracts.ps1                        # expect 11/11: the committed CSVs are what SQL produces
 powershell erp_extracts/Export_Extracts.ps1
 powershell excel/Build_Workbook.ps1
 powershell excel/Validate_Workbook.ps1                               # expect 14/14
