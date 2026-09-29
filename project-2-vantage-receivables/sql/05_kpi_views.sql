@@ -248,11 +248,14 @@ AS RETURN
                  / NULLIF(o.BeginAR + s.MonthSales - c.EndCurrentAR, 0) AS DECIMAL(6,2)),
         CEI_Cash = CAST(100.0 * x.CashApplied
                  / NULLIF(o.BeginAR + s.MonthSales - c.EndCurrentAR, 0) AS DECIMAL(6,2)),
+        -- the difference of the two CEIs AS PUBLISHED, so a reader subtracting the
+        -- printed figures gets the printed gap. Subtracting the unrounded ratios
+        -- instead printed 0.74 at 2024-06 beside CEI_Book 71.80 and CEI_Cash 71.05.
         PaperCollectionsGap = CAST(
-                   100.0 * (o.BeginAR + s.MonthSales - c.EndAR)
-                 / NULLIF(o.BeginAR + s.MonthSales - c.EndCurrentAR, 0)
-                 - 100.0 * x.CashApplied
-                 / NULLIF(o.BeginAR + s.MonthSales - c.EndCurrentAR, 0) AS DECIMAL(6,2)),
+                   CAST(100.0 * (o.BeginAR + s.MonthSales - c.EndAR)
+                        / NULLIF(o.BeginAR + s.MonthSales - c.EndCurrentAR, 0) AS DECIMAL(6,2))
+                 - CAST(100.0 * x.CashApplied
+                        / NULLIF(o.BeginAR + s.MonthSales - c.EndCurrentAR, 0) AS DECIMAL(6,2)) AS DECIMAL(6,2)),
         PctPastDue = CAST(100.0 * c.PastDueAR / NULLIF(c.EndAR, 0) AS DECIMAL(6,2)),
         Pct90Plus  = CAST(100.0 * c.AR90Plus  / NULLIF(c.EndAR, 0) AS DECIMAL(6,2)),
         PctDisputed = CAST(100.0 * c.DisputedAR / NULLIF(c.EndAR, 0) AS DECIMAL(6,2)),
@@ -538,11 +541,14 @@ RANKING
 
 BOUNDING
     A ranked list of every account with a past-due balance is a ledger, not a
-    worklist: it runs to roughly three quarters of the customer base, and six
-    collectors cannot call that many accounts in a day. The view therefore stays
-    complete for audit, and IsTodaysWorklist marks what is actionable today:
+    worklist: it runs to roughly two thirds of the customer base (272 of 400),
+    and six collectors cannot call that many accounts in a day. The view
+    therefore stays complete for audit, and IsTodaysWorklist marks what is
+    actionable today:
         - every ESCALATE or credit-hold account, whatever its rank; plus
-        - each collector's top CallsPerCollectorPerDay accounts by exposure.
+        - each collector's top CallsPerCollectorPerDay accounts by exposure;
+        - but never an APPLY_CASH account, which ranks last in its collector's
+          order and is left off the list: that customer has already paid.
     Work is ranked WITHIN collector as well as overall, because the queue is
     handed out per collector: a single overall top-N would give one collector
     the whole day and the rest nothing.
@@ -603,11 +609,8 @@ Scored AS (
     WHERE ca.PastDueBalance > 0 OR ca.DisputedBalance > 0
        OR ca.CreditUtilizationPct > t.CreditLimitWarn
 ),
-Ranked AS (
+Actioned AS (
     SELECT s.*,
-        PriorityRank  = ROW_NUMBER() OVER (ORDER BY s.CollectableExposure DESC, s.Balance90Plus DESC, s.CustomerID),
-        CollectorRank = ROW_NUMBER() OVER (PARTITION BY s.CollectorID
-                                           ORDER BY s.CollectableExposure DESC, s.Balance90Plus DESC, s.CustomerID),
         ActionCode = CASE
             -- Highest precedence, ahead of everything: this customer has
             -- already paid and nobody matched the cash. Ringing them is the one
@@ -629,6 +632,17 @@ Ranked AS (
             ELSE                                                       'CREDIT_REVIEW'
         END
     FROM Scored s
+),
+-- Ranked AFTER the action is known, so the collector's call order can see it.
+-- APPLY_CASH accounts sort last within their collector: they are not to be
+-- called, so they must never take one of the collector's daily call slots.
+Ranked AS (
+    SELECT a.*,
+        PriorityRank  = ROW_NUMBER() OVER (ORDER BY a.CollectableExposure DESC, a.Balance90Plus DESC, a.CustomerID),
+        CollectorRank = ROW_NUMBER() OVER (PARTITION BY a.CollectorID
+                                           ORDER BY CASE WHEN a.ActionCode = 'APPLY_CASH' THEN 1 ELSE 0 END,
+                                                    a.CollectableExposure DESC, a.Balance90Plus DESC, a.CustomerID)
+    FROM Actioned a
 )
 SELECT
     r.PriorityRank, r.CollectorRank,
@@ -641,6 +655,9 @@ SELECT
     r.UnappliedCash, r.NetExposure, r.BrokenPromises90d,
     r.ActionCode, r.CreditHoldFlag,
     IsTodaysWorklist = CAST(CASE
+        -- "Do not call" is absolute: the work is cash application's, never a
+        -- collector's, even on an account that is also over its credit limit
+        WHEN r.ActionCode = 'APPLY_CASH'                       THEN 0
         WHEN r.ActionCode = 'ESCALATE' OR r.CreditHoldFlag = 1 THEN 1
         WHEN r.CollectorRank <= r.CallsPerCollectorPerDay      THEN 1
         ELSE 0 END AS BIT),

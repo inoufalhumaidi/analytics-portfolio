@@ -249,7 +249,7 @@ CashCycle = BillingLag + DSO_classic = 1.78 + 61.59 = 63.37 days
 <td style="text-align:left">Promise kept rate</td>
 <td style="text-align:right">86.60%</td>
 <td style="text-align:center"><strong>Green</strong></td>
-<td style="text-align:left">High-risk tier: <strong>54.57%</strong> by value, 40.29% by count</td>
+<td style="text-align:left">High-risk tier: <strong>54.57%</strong> by value, 40.79% by count</td>
 </tr>
 <tr>
 <td style="text-align:left">Billing lag</td>
@@ -265,7 +265,7 @@ CashCycle = BillingLag + DSO_classic = 1.78 + 61.59 = 63.37 days
 </tr>
 </tbody></table>
 <p>Every one of these aggregates is arithmetically correct and every one is operationally useless on its own. A portfolio average cannot breach until the whole book does; by then the cohort that caused it has been failing for a year. Each of these three now ships with its cohort cut attached to the same report, because a number that can only be read one way is a number that will be read the wrong way.</p>
-<p>The promise figure is the sharpest: <strong>244 broken promises worth $625,642</strong>, almost entirely in one risk tier, sitting underneath a portfolio figure that clears its target.</p>
+<p>The promise figure is the sharpest: <strong>255 broken promises worth $660,504</strong>, 239 of them in one risk tier, sitting underneath a portfolio figure that clears its target.</p>
 <h3>3.5 Collections effectiveness is flattered by write-offs</h3>
 <p>The textbook Collection Effectiveness Index measures whether AR went down — and AR goes down identically whether a customer wired the money or a controller wrote the balance off. That makes the standard metric improvable by giving up.</p>
 <table><thead><tr>
@@ -397,12 +397,12 @@ CashCycle = BillingLag + DSO_classic = 1.78 + 61.59 = 63.37 days
 <td style="text-align:right"><strong>65</strong></td>
 </tr>
 </tbody></table>
-<p><strong>65 accounts — 10 to 12 per collector — carrying 81.3% of the collectable exposure.</strong></p>
+<p><strong>65 accounts — 10 to 13 per collector — carrying 81.3% of the collectable exposure.</strong></p>
 <p>Four design decisions are worth naming:</p>
 <ul>
-<li><strong><code>APPLY_CASH</code> outranks everything.</strong> 51 accounts have cash already banked against them</li>
+<li><strong><code>APPLY_CASH</code> takes precedence over every other action.</strong> 51 accounts have cash already banked</li>
 </ul>
-<p>covering at least half their past-due balance. Ringing a customer who has already paid is the single most damaging call a collections team can make, and it is not a collections job at all — it is a cash application job. These accounts are routed out of the call list entirely, and <strong>UAT-20 asserts that none of them can reach a collector's worklist</strong>.</p>
+<p>against them covering at least half their past-due balance. Ringing a customer who has already paid is the single most damaging call a collections team can make, and it is not a collections job at all — it is a cash application job. These accounts are routed out of the call list entirely: they never take one of a collector's daily slots, and <strong>UAT-20 asserts at every month-end that none of them reaches a collector's worklist</strong>.</p>
 <ul>
 <li><strong>Disputes are discounted, not ranked.</strong> Chasing cash on a disputed invoice does not work; that</li>
 </ul>
@@ -460,7 +460,7 @@ CashCycle = BillingLag + DSO_classic = 1.78 + 61.59 = 63.37 days
 <td style="text-align:left"><strong>5</strong></td>
 <td style="text-align:left"><strong>Report promise kept-rate by risk tier, never as a portfolio figure</strong></td>
 <td style="text-align:left">Collections manager</td>
-<td style="text-align:left">86.60% overall conceals 54.57% in the High tier, 244 broken promises worth $625,642</td>
+<td style="text-align:left">86.60% overall conceals 54.57% in the High tier: 239 of the 255 broken promises, worth $607,759</td>
 <td style="text-align:left">Turns a Green light into an early-warning system</td>
 </tr>
 <tr>
@@ -496,7 +496,7 @@ CashCycle = BillingLag + DSO_classic = 1.78 + 61.59 = 63.37 days
 <p><strong>The lesson:</strong> a defect that is internally consistent will pass every internal check. Cross-cuts that no single check covers are where they surface — and an implausible result deserves investigation before it deserves a slide.</p>
 <h3>6.2 A dashboard that reported success while broken</h3>
 <p>The Excel build script completed without error and printed "Saved". Opening the file showed <code>#REF!</code> through the entire Priority Queue: Excel does not defer a reference to a sheet that does not exist yet — it rewrites the reference and moves on, and the Calc sheet had been written before the sheets it referenced were created.</p>
-<p>A second fault was worse because it was quieter: the ageing matrix's dimension lists were written over the countback block's "covers the balance?" flags, so <code>MATCH</code> skipped the overwritten rows and returned Best Possible DSO of <strong>42.75</strong> instead of <strong>46.19</strong> — a plausible number, not an error.</p>
+<p>A second fault was worse because it was quieter: the ageing matrix's dimension lists were written over the countback block's "covers the balance?" flags, so <code>MATCH</code> skipped the overwritten rows and returned Best Possible DSO of <strong>42.75</strong> instead of <strong>46.19</strong>, the correct figure on the data of the time (46.27 on the final dataset) — a plausible number, not an error.</p>
 <p>Both were found by a separate script that opens the saved workbook, forces a recalculation and reads the values back. <strong>A build that finishes without throwing has proved it ran, not that it produced a working file.</strong></p>
 <h3>6.3 A published figure that disagreed with its own components</h3>
 <p><code>AvgDaysDelinquent</code> is <code>DSO − BPDSO</code>. All three were rounded to two decimals independently, so the page published 63.07, 46.27 and 16.81 — and a reader doing the subtraction got 16.80. Caught by UAT-11.</p>

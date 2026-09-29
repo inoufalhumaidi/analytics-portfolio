@@ -134,6 +134,33 @@ figure is computed from its components as published, not from their unrounded in
 
 ---
 
+### 3f. Three defects found by building the web demo (2026-09-29) — fixed
+
+The Streamlit demo had to reproduce every case-study figure from the committed extracts alone,
+which is a stricter reading than any earlier check made. It found two more instances of the
+rounding class in 3.4, and a routing rule that held only by coincidence.
+
+- **`PaperCollectionsGap` subtracted the unrounded CEIs.** At 2024-06 the view published a gap of
+  **0.74** beside `CEI_Book` 71.80 and `CEI_Cash` 71.05; a reader subtracting got 0.75, which is
+  what the case study printed. Also 2025-04, -06 and -08. It is now the difference of the two CEIs
+  as published.
+- **The DSO bridge left a 0.01 residual in five months.** `LatenessDays` was rounded on its own, so
+  granted + dispute + lateness missed classic DSO by a cent at 2024-06, 2024-08, 2025-02, 2025-03
+  and 2025-05. It is now the published total less the two published parts, as `AvgDaysDelinquent`
+  is. **UAT-04 checked one date, 2025-12-31, where the residual happened to be zero**; it now
+  checks every month-end.
+- **An account that had already paid could reach a collector's call list.** The rule that
+  `APPLY_CASH` accounts are never called was not in the view: they were ranked for call slots like
+  any other account, and at 2025-12-31 none happened to rank high enough. At 2025-06-30 and
+  2025-07-31, C0095 — cash banked, recommended action *"Do not call"* — was on its collector's
+  list. **UAT-20 also checked only 2025-12-31.** The view now ranks `APPLY_CASH` accounts last
+  within their collector and keeps them off the list outright, and UAT-20 checks every month-end:
+  0 of 688 `APPLY_CASH` account-months. At the reporting date the list is unchanged (the same 65
+  accounts); only the collector ranks below them moved.
+
+Each widened test failed on the old SQL before the fix went in. All figures quoted in the case
+study at 2025-12 are unchanged.
+
 ### 3e. Four defects found in a later review (2026-09-19)
 
 This project was reviewed last of the three, after the same review had found a wrong headline

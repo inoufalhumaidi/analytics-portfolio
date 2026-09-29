@@ -879,7 +879,7 @@ in
         @('SHEETS', 'head'),
         @('Dashboard         The scorecard, the DSO bridge and the ageing profile. Every number is a formula over the extract.', 'body'),
         @('Priority Queue    The operational control: who to call, in what order, with the instruction and the dollar ask.', 'body'),
-        @('Cash Application   The OTHER worklist: money already banked that nobody matched. These accounts must not be called.', 'body'),
+        @('Cash Application   The OTHER worklist: money already banked that nobody matched. Where it covers at least half the past-due balance (APPLY_CASH) the account must not be called; elsewhere, quote the balance net of it.', 'body'),
         @('Ageing Matrix     Open AR by bucket, cut by any dimension you pick.', 'body'),
         @('Validation        Each headline figure computed twice -- once in SQL, once in Excel -- and reconciled.', 'body'),
         @('Control           Every parameter the workbook obeys.', 'body'),

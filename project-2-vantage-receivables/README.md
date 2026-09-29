@@ -57,6 +57,10 @@ project-2-vantage-receivables/
 │   ├── Build_Workbook.ps1            builds the workbook from the extracts
 │   ├── Validate_Workbook.ps1         opens it, recalculates, reads the values back
 │   └── Vantage_AR_Control.xlsx       the operational control
+├── streamlit/
+│   ├── app.py                        the web demo: five screens, each ending in a decision
+│   ├── validate_app.py               runs every screen and checks every figure it shows
+│   └── requirements.txt              what the web demo installs (pinned)
 ├── docs/
 │   ├── data_validation_report.md     what was tested, what broke, what was retained
 │   └── requirements_traceability_matrix.md   24 requirements traced to tests and evidence
@@ -89,7 +93,7 @@ ageing bucket. 36 applications worth $165,306 fall in exactly that window here.
 
 | Metric | Portfolio | Status | The cohort underneath |
 |---|---:|:---:|---|
-| Promise kept rate | 86.60% | Green | High-risk tier: **54.57%**, 244 broken promises worth $625,642 |
+| Promise kept rate | 86.60% | Green | High-risk tier: **54.57%**, 239 of the 255 broken promises, worth $607,759 |
 | Billing lag | 1.78 d | Green | Southeast DC: **3.22 d**, drifting 1.56 → 4.78 through 2025 |
 | Credit utilisation | 17.70% | Green | One account over limit at **106%**; three above the 80% target |
 
@@ -110,7 +114,7 @@ red/amber/green status from `INDEX`/`MATCH` against the target table.
 |---|---|
 | **Dashboard** | Scorecard, DSO bridge, true cash cycle, ageing profile — all recomputed by formula |
 | **Priority Queue** | Who to call, in what order, with the instruction and the dollar ask |
-| **Cash Application** | The *other* worklist: money already banked that nobody matched. These accounts must not be called |
+| **Cash Application** | The *other* worklist: money already banked that nobody matched. Where it covers at least half the past-due balance (`APPLY_CASH`) the account must not be called; elsewhere a collector quotes the balance net of it |
 | **Ageing Matrix** | Open AR by bucket, cut by any dimension, via `SUMIFS` with an `INDEX`/`MATCH` criteria column |
 | **Validation** | Every headline figure computed twice — SQL and Excel — and reconciled |
 | **Control** | Every parameter the workbook obeys |
@@ -143,9 +147,10 @@ against the account — then bounds itself to what the team can work:
 | `COURTESY_REMINDER` | 12 | $26,036 | $6,509 | 0 |
 | **`APPLY_CASH`** | **51** | **$303,692** | **$5,011** | **0** |
 
-`APPLY_CASH` outranks everything. 51 accounts have cash already banked covering at least half
-their past-due balance; ringing a customer who has already paid is the most damaging call a
-collections team can make. **UAT-20 asserts none of them can reach a collector's worklist.**
+`APPLY_CASH` takes precedence over every other action. 51 accounts have cash already banked
+covering at least half their past-due balance; ringing a customer who has already paid is the most
+damaging call a collections team can make. They never take a collector's call slot, and **UAT-20
+asserts at every month-end that none of them reaches a collector's worklist.**
 
 ---
 
@@ -173,7 +178,7 @@ was entirely false. Only a cut of **ageing against terms** exposed it.
 
 **A workbook that reported success while broken.** The build printed "Saved"; the file was full of
 `#REF!`, because Excel does not defer a reference to a sheet that does not exist yet. Worse, a
-layout collision made Best Possible DSO read a *plausible* 42.75 instead of 46.19.
+layout collision made Best Possible DSO read a *plausible* 42.75 instead of 46.19 (46.27 on the final dataset).
 
 **A test whose premise my own feature invalidated.** UAT-02 subtracted all cash applied after 30
 June from the December figure. Once applications could legitimately fall *after* the reporting
@@ -201,6 +206,9 @@ powershell erp_extracts/Validate_Extracts.ps1                       # expect 11/
 powershell erp_extracts/Export_Extracts.ps1
 powershell excel/Build_Workbook.ps1
 powershell excel/Validate_Workbook.ps1                              # expect 27/27
+
+python streamlit/validate_app.py                                    # expect 188/188; reads only the extracts
+streamlit run streamlit/app.py
 ```
 
 **The gate is a separate step, and that is easy to miss.** `04_data_quality_checks.sql` *creates* `usp_RunDataQualityChecks`; it does not run it. The gate only fires when the procedure is executed, which is why the line above is there. **This project's gate is meant to fail** — 96 planted duplicate receipts mis-state AR by **3.421% against a 1% tolerance**, the procedure raises, and `sqlcmd -b` returns a non-zero exit code. That failure is the demonstration that the detector fires; a build that goes green here has not run the gate.

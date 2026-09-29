@@ -100,11 +100,13 @@ INSERT INTO #UATResults VALUES ('UAT-03','Ageing',
 /* ---------------------------------------------------------------------------
 UAT-04  The DSO bridge is an identity, not an approximation.
 --------------------------------------------------------------------------- */
+-- every month-end: at 2025-12-31 alone this passed while five other months
+-- carried a 0.01 residual
 DECLARE @bridgeResidual DECIMAL(18,4) = (
-    SELECT ABS(DSO_Classic - (GrantedDays + DisputeDays + LatenessDays))
-    FROM dbo.fn_DSOBridge('2025-12-31'));
+    SELECT MAX(ABS(b.DSO_Classic - (b.GrantedDays + b.DisputeDays + b.LatenessDays)))
+    FROM dbo.vw_ARKPIMonthly k CROSS APPLY dbo.fn_DSOBridge(k.AsOfDate) b);
 INSERT INTO #UATResults VALUES ('UAT-04','DSO bridge',
- 'GrantedDays + DisputeDays + LatenessDays equals classic DSO exactly',
+ 'GrantedDays + DisputeDays + LatenessDays equals classic DSO exactly, every month-end',
  '0.0000', CAST(@bridgeResidual AS VARCHAR(20)),
  CASE WHEN @bridgeResidual < 0.005 THEN 'PASS' ELSE 'FAIL' END,
  'The whole argument this project settles -- how much of the DSO rise was granted versus taken -- rests on these three parts summing to the total. A residual invites someone to plug it into the nearest component, which is how an analysis becomes an opinion.');
@@ -367,14 +369,22 @@ INSERT INTO #UATResults VALUES ('UAT-19','Unapplied cash',
 
 /* ---------------------------------------------------------------------------
 UAT-20  Accounts whose cash is already banked are routed OUT of the call list.
+
+        At EVERY month-end, not just the reporting date. Checked at 2025-12-31
+        alone this passed while C0095 -- already paid -- sat on a collector's
+        list at 2025-06-30 and 2025-07-31: the exclusion was a coincidence of
+        rank, not a rule. The rule now lives in the view; this proves it holds.
 --------------------------------------------------------------------------- */
 DECLARE @applyCashOnList INT = (
-    SELECT COUNT(*) FROM dbo.fn_PriorityActionQueue('2025-12-31')
-    WHERE ActionCode = 'APPLY_CASH' AND IsTodaysWorklist = 1);
+    SELECT COUNT(*) FROM dbo.vw_ARKPIMonthly k
+    CROSS APPLY dbo.fn_PriorityActionQueue(k.AsOfDate) q
+    WHERE q.ActionCode = 'APPLY_CASH' AND q.IsTodaysWorklist = 1);
 DECLARE @applyCashCount INT = (
-    SELECT COUNT(*) FROM dbo.fn_PriorityActionQueue('2025-12-31') WHERE ActionCode = 'APPLY_CASH');
+    SELECT COUNT(*) FROM dbo.vw_ARKPIMonthly k
+    CROSS APPLY dbo.fn_PriorityActionQueue(k.AsOfDate) q
+    WHERE q.ActionCode = 'APPLY_CASH');
 INSERT INTO #UATResults VALUES ('UAT-20','Priority queue',
- 'No APPLY_CASH account appears on a collector worklist',
+ 'No APPLY_CASH account appears on a collector worklist at any month-end',
  '0 of ' + CAST(@applyCashCount AS VARCHAR(10)), CAST(@applyCashOnList AS VARCHAR(10)),
  CASE WHEN @applyCashOnList = 0 THEN 'PASS' ELSE 'FAIL' END,
  'Ringing a customer who has already paid is the single most damaging call a collections team can make. If the routing leaks, the queue actively causes the harm it exists to prevent.');

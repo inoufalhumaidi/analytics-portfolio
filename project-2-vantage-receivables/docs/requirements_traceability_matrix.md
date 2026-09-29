@@ -47,7 +47,7 @@ reviewer can check the claim rather than take it.
 | **BR-21** | Show days-beyond-terms without survivorship bias | Collections | C | `fn_DBT(@AsOf, @Months)` — settled and at-risk variants | UAT-25 | Settled **10.56 d** vs at-risk **12.41 d**; survivorship gap widened from **0.62 d** (2024) to **1.85 d** (2025) |
 | **BR-22** | **Track unapplied cash sitting against paid accounts** | **Cash application** | **M** | **`Fact_CashReceipt` + `Fact_CashApplication`; `fn_UnappliedCash(@AsOf)`; `usp_CashApplicationWorklist`; `APPLY_CASH` routing** | **UAT-18, 19, 20, 24** | **$419,392.13 across 97 accounts; 57 receipts wholly unapplied; oldest wholly-unapplied 668 days; oldest with any remainder 679; 51 accounts routed out of the call list** |
 | **BR-23** | **Measure billing lag from despatch to invoice** | **Operations** | **S** | **`Fact_Invoice.ShipDateKey`; `fn_BillingLag`; `vw_BillingLagMonthly`; `usp_BillingLagReport`; `CashCycleDays`** | **UAT-21** | **1.78 days overall; Southeast 3.22 vs 1.49–1.51 elsewhere; true cash cycle 63.37 days** |
-| **BR-24** | **Report promise-to-pay kept rate** | **Collections** | **S** | **`Fact_PromiseToPay`; `fn_PromiseStatus`; `fn_PromiseKeptRate`; `usp_PromiseReport`; broken-promise escalation in the queue** | **UAT-22, 23** | **86.60% by value overall; High-risk tier 54.57%; 244 broken promises worth $625,642** |
+| **BR-24** | **Report promise-to-pay kept rate** | **Collections** | **S** | **`Fact_PromiseToPay`; `fn_PromiseStatus`; `fn_PromiseKeptRate`; `usp_PromiseReport`; broken-promise escalation in the queue** | **UAT-22, 23** | **86.60% by value overall; High-risk tier 54.57%; 255 broken promises worth $660,504, 239 of them High-risk** |
 
 ---
 

@@ -407,12 +407,20 @@ AS RETURN
         DSO_Classic   = CAST(b.TotalAR             * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2)),
         GrantedDays   = CAST(b.CurrentAR           * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2)),
         DisputeDays   = CAST(b.DisputedPastDueAR   * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2)),
-        LatenessDays  = CAST(b.UndisputedPastDueAR * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2)),
+        -- Lateness is the published total less the two published parts, so the
+        -- bridge adds up exactly as printed in EVERY month (as AvgDaysDelinquent
+        -- is derived in fn_DSO). Rounded on its own, it left a 0.01 residual in
+        -- five months that UAT-04, checking one date, never saw.
+        LatenessDays  = CAST(CAST(b.TotalAR           * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2))
+                           - CAST(b.CurrentAR         * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2))
+                           - CAST(b.DisputedPastDueAR * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2)) AS DECIMAL(9,2)),
         WeightedAvgTermsDays = t.WeightedAvgTermsDays,
         TermsPositionDays = CAST(b.CurrentAR * w.Days12 / NULLIF(w.Sales12, 0)
                                - t.WeightedAvgTermsDays AS DECIMAL(9,2)),
         -- the recoverable half: what a call list can actually move
-        RecoverableDays = CAST(b.UndisputedPastDueAR * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2)),
+        RecoverableDays = CAST(CAST(b.TotalAR           * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2))
+                             - CAST(b.CurrentAR         * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2))
+                             - CAST(b.DisputedPastDueAR * w.Days12 / NULLIF(w.Sales12, 0) AS DECIMAL(9,2)) AS DECIMAL(9,2)),
         RecoverableCash = CAST(b.UndisputedPastDueAR AS DECIMAL(14,2)),
         -- Billing lag sits BEFORE the DSO clock starts, so it extends the
         -- measure rather than decomposing it. This is the honest figure: days

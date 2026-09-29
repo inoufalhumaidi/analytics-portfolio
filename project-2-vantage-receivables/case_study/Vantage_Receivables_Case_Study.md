@@ -167,7 +167,7 @@ This is the pattern worth taking away from the whole engagement.
 
 | Metric | Portfolio | Status | The cohort underneath |
 |---|---:|:---:|---|
-| Promise kept rate | 86.60% | **Green** | High-risk tier: **54.57%** by value, 40.29% by count |
+| Promise kept rate | 86.60% | **Green** | High-risk tier: **54.57%** by value, 40.79% by count |
 | Billing lag | 1.78 d | **Green** | Southeast DC: **3.22 d**, drifting 1.56 → 4.78 through 2025 |
 | Credit utilisation | 17.70% | **Green** | One account over limit at **106%**; three above the 80% target |
 
@@ -177,8 +177,8 @@ caused it has been failing for a year. Each of these three now ships with its co
 to the same report, because a number that can only be read one way is a number that will be read
 the wrong way.
 
-The promise figure is the sharpest: **244 broken promises worth $625,642**, almost entirely in one
-risk tier, sitting underneath a portfolio figure that clears its target.
+The promise figure is the sharpest: **255 broken promises worth $660,504**, 239 of them in one risk
+tier, sitting underneath a portfolio figure that clears its target.
 
 ### 3.5 Collections effectiveness is flattered by write-offs
 
@@ -235,15 +235,16 @@ itself to what the team can work:
 | **`APPLY_CASH`** | **51** | **$303,692** | **$5,011** | **0** |
 | **Total** | **272** | **$2,751,288** | **$788,318** | **65** |
 
-**65 accounts — 10 to 12 per collector — carrying 81.3% of the collectable exposure.**
+**65 accounts — 10 to 13 per collector — carrying 81.3% of the collectable exposure.**
 
 Four design decisions are worth naming:
 
-- **`APPLY_CASH` outranks everything.** 51 accounts have cash already banked against them
-  covering at least half their past-due balance. Ringing a customer who has already paid is the
-  single most damaging call a collections team can make, and it is not a collections job at all —
-  it is a cash application job. These accounts are routed out of the call list entirely, and
-  **UAT-20 asserts that none of them can reach a collector's worklist**.
+- **`APPLY_CASH` takes precedence over every other action.** 51 accounts have cash already banked
+  against them covering at least half their past-due balance. Ringing a customer who has already
+  paid is the single most damaging call a collections team can make, and it is not a collections
+  job at all — it is a cash application job. These accounts are routed out of the call list
+  entirely: they never take one of a collector's daily slots, and **UAT-20 asserts at every
+  month-end that none of them reaches a collector's worklist**.
 - **Disputes are discounted, not ranked.** Chasing cash on a disputed invoice does not work; that
   balance needs the dispute resolving, which is a different team's job.
 - **Two broken promises in 90 days escalates**, regardless of balance. It is the earliest
@@ -273,7 +274,7 @@ cost. It is already in the bank.
 | **2** | **Fix duplicate receipt posting** | Controller | 96 duplicate bankings mis-state AR by 3.421% | **$371,040** of AR correctly stated |
 | **3** | **Reset the DSO target to terms + allowance**, about **55 days** | CFO | Target 45 sits 1.68 days below the 46.68-day terms floor | Restores a scorecard the team can act on |
 | **4** | **Work the bounded queue**, starting with the 19 escalations | Collections manager | 65 accounts carry 81.3% of collectable exposure | Focuses 6 collectors on **$640,540** of the $788,318 at stake |
-| **5** | **Report promise kept-rate by risk tier, never as a portfolio figure** | Collections manager | 86.60% overall conceals 54.57% in the High tier, 244 broken promises worth $625,642 | Turns a Green light into an early-warning system |
+| **5** | **Report promise kept-rate by risk tier, never as a portfolio figure** | Collections manager | 86.60% overall conceals 54.57% in the High tier: 239 of the 255 broken promises, worth $607,759 | Turns a Green light into an early-warning system |
 | **6** | **Investigate Southeast invoice posting** | Operations | 3.22 days against a 1.50 baseline elsewhere, drifting all year | **$50,477** of cash, recoverable by changing a batch schedule |
 | **7** | **Price and cap the extended-terms programme** at the Q1 review | Sales director | Shift-share isolates a deliberate +1.71-day rate effect across the same 400 customers | Makes ~$301k of working capital a priced decision rather than a drift |
 | **8** | **Measure collections on CEI (cash), not CEI (book)** | CFO | $702,389 of write-offs currently score as collections | Removes an incentive to improve the metric by giving up |
@@ -314,8 +315,8 @@ before the sheets it referenced were created.
 
 A second fault was worse because it was quieter: the ageing matrix's dimension lists were written
 over the countback block's "covers the balance?" flags, so `MATCH` skipped the overwritten rows
-and returned Best Possible DSO of **42.75** instead of **46.19** — a plausible number, not an
-error.
+and returned Best Possible DSO of **42.75** instead of **46.19**, the correct figure on the data of
+the time (46.27 on the final dataset) — a plausible number, not an error.
 
 Both were found by a separate script that opens the saved workbook, forces a recalculation and
 reads the values back. **A build that finishes without throwing has proved it ran, not that it

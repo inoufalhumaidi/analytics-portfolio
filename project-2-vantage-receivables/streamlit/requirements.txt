@@ -1,0 +1,21 @@
+# Project 2 -- Vantage Wholesale Supply: the DEPLOYED app's dependencies.
+#
+# Streamlit Community Cloud looks for a dependency file beside the entry point
+# (this folder) before the repository root, so this file is what the live demo
+# installs. Project 2 has no other Python environment: the analysis is T-SQL,
+# Power Query and Excel, and this app only reads their committed CSV extracts.
+#
+# PINNED because a deployment should run exactly what was verified. Cloud
+# reinstalls dependencies whenever it rebuilds the app, so with floors an
+# untested release would reach the demo unattended. Upgrade these deliberately,
+# re-run streamlit/validate_app.py, then change them here. Both are the
+# versions the app was verified on (2026-09-29), on Python 3.12.
+#
+# Only what app.py imports. The app reads erp_extracts/*.csv -- there is no SQL
+# Server on Cloud -- so no database driver is listed.
+#
+# Streamlit must be >= 1.49: app.py passes st.dataframe(width="stretch"), and
+# every release from 1.30 to 1.48 raises TypeError on it at the first screen.
+
+streamlit==1.64.0
+pandas==3.0.6
