@@ -33,7 +33,8 @@ Every project follows the same standard:
 
 The validation report records the real bugs that cross-checking caught along the way, including a KPI view that silently pooled months and a regional utilization figure that would have been understated about fivefold. See [`docs/data_validation_report.md`](project-1-ridgeline-field-services/docs/data_validation_report.md).
 
-Start with the project [README](project-1-ridgeline-field-services/README.md) for the reproduction steps.
+**Try it live: [Ridgeline Dispatch Board](https://inoufalhumaidi.github.io/analytics-portfolio/project-1-ridgeline-field-services/dashboard/)**, the interactive dashboard on GitHub Pages, with
+nothing to install. Or start with the project [README](project-1-ridgeline-field-services/README.md) for the reproduction steps.
 
 ## Project 2 at a glance
 

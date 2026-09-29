@@ -4,6 +4,10 @@
 
 Ridgeline Field Services is a fictional HVAC/electrical field-service dispatch company. All data in this project is synthetically generated — no confidential, proprietary, or production data of any real organization is used or represented anywhere in this project.
 
+> **▶ Live demo: [Ridgeline Dispatch Board](https://inoufalhumaidi.github.io/analytics-portfolio/project-1-ridgeline-field-services/dashboard/)**. The interactive dashboard, served by GitHub
+> Pages straight from `dashboard/index.html` in this repository. Nothing to install and no database:
+> its figures were exported from the SQL views and are embedded in the page.
+
 ## Stack
 
 SQL Server (star schema, reusable views/procs) → Power BI (DAX) → Excel (formula-driven operational control) → live HTML dashboard.
@@ -46,7 +50,7 @@ SQL Server (star schema, reusable views/procs) → Power BI (DAX) → Excel (for
    > copied across, and the saved file was reopened from disk and re-checked. See
    > `docs/data_validation_report.md` §8.
 
-4. **Live dashboard.** `dashboard/index.html` is a self-contained interactive dashboard: download it and open it in any browser, with no server or install. Its data was exported from the SQL views into `data_exports/`, and the file follows light or dark mode from your system setting.
+4. **Live dashboard.** `dashboard/index.html` is a self-contained interactive dashboard, [live on GitHub Pages](https://inoufalhumaidi.github.io/analytics-portfolio/project-1-ridgeline-field-services/dashboard/); or download it and open it in any browser, with no server or install. Its data was exported from the SQL views into `data_exports/`, and the file follows light or dark mode from your system setting.
 
 5. **Case study.** `case_study/Project1_Ridgeline_Case_Study.pdf` — the decision-focused narrative built from everything above.
 
