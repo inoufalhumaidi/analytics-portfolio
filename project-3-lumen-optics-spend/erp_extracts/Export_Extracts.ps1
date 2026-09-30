@@ -125,11 +125,27 @@ FROM dbo.vw_SpendKPIMonthly ORDER BY AsOfDate;
 # A procedure fills a DataTable perfectly well, so these summaries come from the
 # procedure itself rather than being re-implemented here. Re-implementing would
 # create a second definition that can drift from the one the database serves.
+# Captured in a table variable so AsOfDate can be written as ISO text like every
+# other extract: the procedure returns a DATE, which Export-Csv wrote in the
+# machine's culture ("12/31/2025 12:00:00 AM"). Types and order are the
+# procedure's own, so every other value is byte-for-byte what EXEC returned.
+function Get-SummarySql([string]$GroupBy) {
+    return @"
+DECLARE @t TABLE (AsOfDate DATE, GroupedBy VARCHAR(20), GroupValue NVARCHAR(100), Lines INT,
+                  TotalSpend DECIMAL(16,2), LandedSpend DECIMAL(16,2), SpendSharePct DECIMAL(6,2),
+                  MaverickPct DECIMAL(6,2), AcceptancePct DECIMAL(6,2), OnTimePct DECIMAL(6,2),
+                  ExpeditePct DECIMAL(6,2), SingleSourcePct DECIMAL(6,2));
+INSERT INTO @t EXEC dbo.usp_CategorySummary @AsOf = '$AsOf', @GroupBy = '$GroupBy';
+SELECT CONVERT(CHAR(10), AsOfDate, 23) AS AsOfDate, GroupedBy, GroupValue, Lines, TotalSpend, LandedSpend,
+       SpendSharePct, MaverickPct, AcceptancePct, OnTimePct, ExpeditePct, SingleSourcePct
+FROM @t ORDER BY TotalSpend DESC;
+"@
+}
 $total += Invoke-Extract -FileName 'category_summary.csv' -Description 'dbo.usp_CategorySummary (by Category)' `
-    -Sql "EXEC dbo.usp_CategorySummary @AsOf = '$AsOf', @GroupBy = 'Category';"
+    -Sql (Get-SummarySql 'Category')
 
 $total += Invoke-Extract -FileName 'team_summary.csv' -Description 'dbo.usp_CategorySummary (by Team)' `
-    -Sql "EXEC dbo.usp_CategorySummary @AsOf = '$AsOf', @GroupBy = 'Team';"
+    -Sql (Get-SummarySql 'Team')
 
 $total += Invoke-Extract -FileName 'erosion_benchmark.csv' -Description 'dbo.Ref_PriceErosionBenchmark' -Sql @"
 SELECT Category, AnnualErosionPct, ToleranceBandPct, MaturityProfile, SourceNote
