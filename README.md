@@ -21,7 +21,7 @@ Every project follows the same standard:
 | 1 | [Ridgeline Field Services: Operational Efficiency](project-1-ridgeline-field-services/) | Where is technician capacity being wasted, and which dispatch decisions should change this week? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
 | 2 | [Vantage Wholesale Supply: Receivables Performance](project-2-vantage-receivables/) | Of the days DSO has risen, how many did we grant through longer terms, how many are customers taking, and how many are our own unapplied cash — and who should collections call first? | Excel · Power Query · SQL · Streamlit | ✅ Complete |
 | 3 | [Lumen Optics Manufacturing: Photonics Spend Scorecard](project-3-lumen-optics-spend/) | Our prices are flat and every variance report is green — so why is material cost per accepted unit rising, and where should sourcing renegotiate first? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
-| 4 | [Talon Robotics: Payload Deployment Delivery](project-4-talon-robotics/) | Is the new payload ready to ship, and what is still open? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
+| 4 | [Talon Robotics: Payload Deployment Delivery](project-4-talon-robotics/) | Is the new payload ready to ship, and what is still open? | SQL Server · Power BI · DAX · Excel · Streamlit | ✅ Complete |
 | 5 | [Meridian UAV Services: Predictive Maintenance](project-5-meridian-uav/) | If we are 99.73% compliant, why do we keep having failures? | Python · SQL Server · Streamlit · Excel | ✅ Complete |
 
 ## Project 1 at a glance
@@ -80,7 +80,8 @@ Start with the project [README](project-3-lumen-optics-spend/README.md) for the 
 
 Three defects in the validation report are worth reading: a function that accepted an as-of parameter and ignored it for one metric, drawing a flat line across twenty months; a UAT harness that dropped its own results table on rollback and so reported `Invalid object name` instead of the failures, reachable only when a test failed; and a fixture that silently stopped testing anything after the generator was tuned. See [`docs/data_validation_report.md`](project-4-talon-robotics/docs/data_validation_report.md).
 
-Start with the project [README](project-4-talon-robotics/README.md) for the reproduction steps.
+**Try it live: [analytics-portfolio-talon-readiness.streamlit.app](https://analytics-portfolio-talon-readiness.streamlit.app/)**, the
+Streamlit app, with nothing to install. Or start with the project [README](project-4-talon-robotics/README.md) for the reproduction steps.
 
 
 ## Project 5 at a glance
