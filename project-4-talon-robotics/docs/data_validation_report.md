@@ -245,8 +245,22 @@ correlation is the finding: they are not behind on testing, they are still being
 
 ### The schedule answer
 
-226 requirements outstanding, **610 rig hours**, **3.4 rig-weeks** at 180 bookable hours. 40 are
-schedulable in the first week.
+226 requirements outstanding, **425 rig hours**, **2.4 rig-weeks** at 180 bookable hours, plus
+**272 airframe hours** (34 flights) reported beside the rig figure and never divided by it. 69 are
+schedulable in the first rig week.
+
+**This figure was wrong three ways until 2026-09-30, and the three errors did not cancel.** The queue,
+the scorecard and the subsystem cut each summed the rig hours of every existing test of an item,
+whatever its action said had to happen: 610 hours, 3.4 rig-weeks, 40 in the first week. That charged
+two self-verified passes needing only a countersignature 7.5 rig hours; costed items with no test at
+their policy level at their lower-level tests, so 89 of the 110 `RAISE_TEST_LEVEL` items looked free;
+charged Regulatory items HIL runs the authority does not accept; and divided 200 airframe hours by
+the capacity of six rigs. It was found while building the web demo, which had to reproduce the
+case study from the extracts. One function, `fn_VerificationCost`, now costs each item by what its
+action needs and is read by all three; UAT-24 recomputes every row at test-case grain (it
+disagreed with the old queue on 77 of 226 rows) and UAT-25 reconciles the three published totals
+resource by resource. The workbook's independent week rule now also leaves out flights, and its
+validator checks Excel's week against SQL's: the old rule would have counted 85, not 69.
 
 ---
 
@@ -314,7 +328,8 @@ itself does not distinguish them. That is deliberate — a partial-credit readin
 ship decision — but it is a simplification worth naming.
 
 **No cost or effort model.** Rig hours bound the queue, but there is no budget, no labour cost and
-no critical path. "Three point four rig-weeks" is a capacity statement, not a schedule forecast.
+no critical path. "Two point four rig-weeks" is a capacity statement, not a schedule forecast, and
+the 272 airframe hours have no capacity in the data to divide by at all.
 
 ---
 
@@ -327,11 +342,11 @@ sqlcmd -S <server> -E -d TalonDelivery -i sql/03_core_views.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/04_data_quality_checks.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/05_kpi_views.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/06_stored_procedures.sql
-sqlcmd -S <server> -E -d TalonDelivery -i sql/07_uat_test_cases.sql     # expect 23/23
+sqlcmd -S <server> -E -d TalonDelivery -i sql/07_uat_test_cases.sql     # expect 25/25
 
 powershell erp_extracts/Export_Extracts.ps1
 powershell excel/Build_Workbook.ps1
-powershell excel/Validate_Workbook.ps1                                  # expect 16/16
+powershell excel/Validate_Workbook.ps1                                  # expect 17/17
 ```
 
 Every figure in this report comes from those scripts. The generator is deterministic, so a rebuild

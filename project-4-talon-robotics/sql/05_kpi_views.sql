@@ -28,6 +28,12 @@ WHY THE QUEUE RANKS THE WAY IT DOES
     everything outstanding is not a plan, and a plan that ignores the rig
     booking is a wish.
 
+    Each item is costed by what its ACTION needs, not by the tests it happens
+    to have (fn_VerificationCost). And the two hardware resources are kept
+    apart: hardware-in-the-loop hours are counted against the rigs, Field hours
+    need the airframe -- one aircraft, weather and a crew -- and are reported
+    beside the rig week, never inside it.
+
 DATA DISCLOSURE: Talon Robotics is fictional; all data is synthetic. No
 confidential data and no production-system claim is involved.
 ================================================================================
@@ -44,6 +50,7 @@ IF OBJECT_ID('dbo.vw_RAIDExposure','V')          IS NOT NULL DROP VIEW dbo.vw_RA
 IF OBJECT_ID('dbo.fn_RAIDExposure','IF')         IS NOT NULL DROP FUNCTION dbo.fn_RAIDExposure;
 IF OBJECT_ID('dbo.vw_ReadinessKPI','V')          IS NOT NULL DROP VIEW dbo.vw_ReadinessKPI;
 IF OBJECT_ID('dbo.fn_ReadinessKPI','IF')         IS NOT NULL DROP FUNCTION dbo.fn_ReadinessKPI;
+IF OBJECT_ID('dbo.fn_VerificationCost','IF')     IS NOT NULL DROP FUNCTION dbo.fn_VerificationCost;
 GO
 
 /*
@@ -129,11 +136,135 @@ GO
 
 /*
 --------------------------------------------------------------------------------
+fn_VerificationCost(@AsOfBuild) -- what each outstanding requirement's action
+actually costs, in the two scarce resources. ONE definition, read by the queue,
+the scorecard and the subsystem cut, so the three cannot disagree.
+
+WHY THIS EXISTS
+
+    The queue, the scorecard and the subsystem cut each summed the RigHours of
+    EVERY existing test case of a non-current requirement, whatever its action
+    said had to happen. That was wrong three ways, and the three errors did not
+    cancel:
+
+      - a self-verified pass that nothing has touched since needs a second
+        engineer's countersignature, not a re-run: REQ-0124 and REQ-0002 were
+        charged 7.5 rig hours for a signature;
+      - a requirement whose tests all sit BELOW its policy level was charged
+        those lower-level tests, which cost nothing on a rig: 89 of the 110
+        RAISE_TEST_LEVEL items cost 0 h, 49 of them HIL-level items that
+        cannot close without the rig;
+      - Field (airframe) hours were added to hardware-in-the-loop hours and
+        the sum divided by the capacity of six rigs.
+
+THE RULE: an action costs the runs whose result can make the requirement current
+
+    Admissible  a test case at or above the policy's MinTestLevel. A pass below
+                it cannot count, so re-running it buys nothing: the HIL cases of
+                a Regulatory requirement are not charged ("rig data is not
+                accepted by the authority", Ref_VerificationPolicy).
+    RERUN, REVIEW_THEN_RERUN, VERIFY, RAISE_TEST_LEVEL
+                every admissible case the requirement has, once.
+    No admissible case at all
+                one run of a test that has to be written first, at MinTestLevel,
+                priced at Ref_TestLevelRank.RigHours for that level. One, because
+                the ship gate needs one admissible pass and no current
+                requirement has fewer; the price is exact, because the data
+                prices every run of a level identically (HIL 2.50, Field 8.00).
+                It is a floor: where a requirement does have tests at its level
+                it has 1.83 of them on average (HIL) and 1.64 (Field).
+    INDEPENDENT_WITNESS
+                0 when neither the subsystem nor the requirement (Modified) has
+                changed since the self-verified pass: a countersignature. Else
+                the admissible cases, re-run under a witness -- a signature on
+                superseded evidence would certify software that no longer
+                exists (REQ-0488: passed on build 57, REL-MECH changed 22 times
+                since).
+
+    RESOURCE    Field runs need the airframe (AirframeHours); every other run
+                with hours needs a rig (RigHours). Ref_TestLevelRank prices both
+                in one column, so the split is by level here.
+
+ActionCode is defined HERE and the queue reads it, so the cost and the action
+can never be computed from two different CASE expressions.
+--------------------------------------------------------------------------------
+*/
+CREATE FUNCTION dbo.fn_VerificationCost (@AsOfBuild INT)
+RETURNS TABLE
+AS RETURN
+(
+    WITH CV AS (
+        SELECT v.*,
+               MinTestLevelRank = lvl.LevelRank,
+               NewCaseHours     = lvl.RigHours,
+               ActionCode = CASE
+                    WHEN v.HasEvidence = 0                             THEN 'VERIFY'
+                    WHEN v.MeetsPolicy = 0 AND v.PassingButSelfVerified > 0
+                                            AND v.PassingButUnderLevelled = 0 THEN 'INDEPENDENT_WITNESS'
+                    WHEN v.MeetsPolicy = 0                             THEN 'RAISE_TEST_LEVEL'
+                    WHEN v.StaleByRequirement = 1                      THEN 'REVIEW_THEN_RERUN'
+                    ELSE                                                    'RERUN' END
+        FROM dbo.fn_RequirementVerification(@AsOfBuild) v
+        JOIN dbo.Ref_TestLevelRank lvl ON lvl.TestLevel = v.MinTestLevel
+        WHERE NOT (v.MeetsPolicy = 1 AND v.StaleByCode = 0 AND v.StaleByRequirement = 0)
+    ),
+    -- The cases whose pass would count, priced per resource.
+    Admissible AS (
+        SELECT v.RequirementKey,
+               RigHours      = SUM(CASE WHEN tc.TestLevel <> 'Field' THEN tlr.RigHours ELSE 0 END),
+               AirframeHours = SUM(CASE WHEN tc.TestLevel =  'Field' THEN tlr.RigHours ELSE 0 END)
+        FROM CV v
+        JOIN dbo.Dim_TestCase tc       ON tc.RequirementKey = v.RequirementKey
+        JOIN dbo.Ref_TestLevelRank tlr ON tlr.TestLevel     = tc.TestLevel
+        WHERE tlr.LevelRank >= v.MinTestLevelRank
+        GROUP BY v.RequirementKey
+    ),
+    -- For a self-verified pass: has anything it depended on moved since? The
+    -- same two staleness rules as fn_RequirementVerification, measured from
+    -- LastPassBuild because LastGoodBuild is NULL for evidence that does not
+    -- count. For INDEPENDENT_WITNESS every pass is at level and self-run, so
+    -- LastPassBuild is the pass the witness would countersign.
+    Witness AS (
+        SELECT v.RequirementKey,
+               SignatureOnly = CASE WHEN NOT EXISTS (
+                        SELECT 1 FROM dbo.Fact_BuildSubsystemChange c
+                        JOIN dbo.Dim_Build b ON b.BuildKey = c.BuildKey
+                        WHERE c.SubsystemKey = v.SubsystemKey
+                          AND b.BuildNumber > v.LastPassBuild AND b.BuildNumber <= @AsOfBuild)
+                    AND NOT EXISTS (
+                        SELECT 1 FROM dbo.Fact_RequirementChange rc
+                        JOIN dbo.Dim_Build b ON b.BuildKey = rc.BuildKey
+                        WHERE rc.RequirementKey = v.RequirementKey AND rc.ChangeType = 'Modified'
+                          AND b.BuildNumber > v.LastPassBuild AND b.BuildNumber <= @AsOfBuild)
+                    THEN 1 ELSE 0 END
+        FROM CV v
+        WHERE v.ActionCode = 'INDEPENDENT_WITNESS'
+    )
+    SELECT v.RequirementKey, v.SubsystemKey, v.ActionCode,
+           NeedsNewCase  = CAST(CASE WHEN a.RequirementKey IS NULL THEN 1 ELSE 0 END AS BIT),
+           SignatureOnly = CAST(ISNULL(w.SignatureOnly, 0) AS BIT),
+           RigHours = CAST(CASE
+                WHEN w.SignatureOnly = 1      THEN 0
+                WHEN a.RequirementKey IS NULL THEN CASE WHEN v.MinTestLevel = 'Field' THEN 0 ELSE v.NewCaseHours END
+                ELSE a.RigHours END AS DECIMAL(9,2)),
+           AirframeHours = CAST(CASE
+                WHEN w.SignatureOnly = 1      THEN 0
+                WHEN a.RequirementKey IS NULL THEN CASE WHEN v.MinTestLevel = 'Field' THEN v.NewCaseHours ELSE 0 END
+                ELSE a.AirframeHours END AS DECIMAL(9,2)),
+           AsOfBuild = @AsOfBuild
+    FROM CV v
+    LEFT JOIN Admissible a ON a.RequirementKey = v.RequirementKey
+    LEFT JOIN Witness    w ON w.RequirementKey = v.RequirementKey
+);
+GO
+
+/*
+--------------------------------------------------------------------------------
 fn_SubsystemReadiness(@AsOfBuild) -- readiness cut by subsystem.
 
 This is where the headline stops being a single number and starts being
-actionable: the programme is not 33% ready everywhere, it is nearly ready in
-five subsystems and nowhere near it in two.
+actionable: the programme is not 52% ready everywhere. The two churning Safety
+subsystems sit at 23% and 32%; the other six at 59% to 83%.
 --------------------------------------------------------------------------------
 */
 CREATE FUNCTION dbo.fn_SubsystemReadiness (@AsOfBuild INT)
@@ -154,6 +285,16 @@ AS RETURN
         FROM dbo.Fact_BuildSubsystemChange c
         JOIN dbo.Dim_Build b ON b.BuildKey = c.BuildKey
         WHERE b.BuildNumber <= @AsOfBuild
+        GROUP BY c.SubsystemKey
+    ),
+    -- The same per-requirement cost the queue and the scorecard use, summed by
+    -- subsystem. Re-deriving it here is how the three once agreed on 610 while
+    -- all three charged the wrong thing.
+    Cost AS (
+        SELECT c.SubsystemKey,
+               RigHours      = SUM(c.RigHours),
+               AirframeHours = SUM(c.AirframeHours)
+        FROM dbo.fn_VerificationCost(@AsOfBuild) c
         GROUP BY c.SubsystemKey
     )
     SELECT
@@ -192,21 +333,22 @@ AS RETURN
         BuildsChanged   = ISNULL(ch.BuildsChanged, 0),
         LinesChanged    = ISNULL(ch.LinesChanged, 0),
         LastChangeBuild = ch.LastChangeBuild,
-        -- Rig hours needed to re-verify everything not current in this
-        -- subsystem. This is the number that turns "we are behind" into "we
-        -- are behind by eleven rig-weeks", which is a different conversation.
-        RigHoursOutstanding = ISNULL((
-            SELECT CAST(SUM(tlr.RigHours) AS DECIMAL(9,2))
-            FROM V v2
-            JOIN dbo.Dim_TestCase tc ON tc.RequirementKey = v2.RequirementKey
-            JOIN dbo.Ref_TestLevelRank tlr ON tlr.TestLevel = tc.TestLevel
-            WHERE v2.SubsystemKey = s.SubsystemKey AND v2.IsCurrent = 0), 0),
+        -- Rig hours needed to bring everything not current in this subsystem
+        -- back to current, costed by what each item's action needs. This is
+        -- the number that turns "we are behind" into "we are behind by this
+        -- many rig-weeks", which is a different conversation.
+        RigHoursOutstanding      = CAST(ISNULL(co.RigHours, 0) AS DECIMAL(9,2)),
+        -- Airframe (Field) hours, reported beside the rig figure and never
+        -- added to it: one airframe is not six rigs.
+        AirframeHoursOutstanding = CAST(ISNULL(co.AirframeHours, 0) AS DECIMAL(9,2)),
         AsOfBuild = @AsOfBuild
     FROM V v
     JOIN dbo.Dim_Subsystem s ON s.SubsystemKey = v.SubsystemKey
     LEFT JOIN Churn ch ON ch.SubsystemKey = s.SubsystemKey
+    LEFT JOIN Cost  co ON co.SubsystemKey = s.SubsystemKey
     GROUP BY s.SubsystemKey, s.SubsystemCode, s.SubsystemName, s.Criticality, s.RequiresHILRig,
-             ch.BuildsChanged, ch.LinesChanged, ch.LastChangeBuild
+             ch.BuildsChanged, ch.LinesChanged, ch.LastChangeBuild,
+             co.RigHours, co.AirframeHours
 );
 GO
 
@@ -250,6 +392,12 @@ AS RETURN
         JOIN dbo.Dim_Date od      ON od.DateKey = w.OpenedDateKey
         LEFT JOIN dbo.Dim_Date cd ON cd.DateKey = w.ClosedDateKey
         WHERE od.[Date] <= @AsOfDate
+    ),
+    -- The queue's own per-requirement cost (fn_VerificationCost), summed.
+    K AS (
+        SELECT RigHours      = SUM(c.RigHours),
+               AirframeHours = SUM(c.AirframeHours)
+        FROM dbo.fn_VerificationCost(@AsOfBuild) c
     )
     SELECT
         AsOfBuild = @AsOfBuild,
@@ -295,15 +443,16 @@ AS RETURN
                             FROM R),
         TotalRAIDExposure = (SELECT SUM(ExposureScore) FROM R WHERE IsOpen = 1),
 
-        -- Total rig hours to bring every non-current requirement back to
-        -- current. Divided by weekly rig capacity this is the honest schedule
-        -- answer, and it is the only figure here a programme board can act on
-        -- without a further study.
-        RigHoursOutstanding = (SELECT CAST(SUM(tlr.RigHours) AS DECIMAL(11,2))
-                               FROM V v2
-                               JOIN dbo.Dim_TestCase tc ON tc.RequirementKey = v2.RequirementKey
-                               JOIN dbo.Ref_TestLevelRank tlr ON tlr.TestLevel = tc.TestLevel
-                               WHERE v2.IsCurrent = 0)
+        -- Rig hours to bring every non-current requirement back to current,
+        -- costed by what each item's action needs. Divided by weekly rig
+        -- capacity this is the honest schedule answer for the rig work, and
+        -- the only figure here a programme board can act on without a further
+        -- study.
+        RigHoursOutstanding      = (SELECT CAST(RigHours AS DECIMAL(11,2)) FROM K),
+        -- Field evidence needs the airframe, which rig capacity does not buy.
+        -- Reported beside the rig figure, never added to it; there is no
+        -- airframe capacity in this data, so it is not turned into weeks.
+        AirframeHoursOutstanding = (SELECT CAST(AirframeHours AS DECIMAL(11,2)) FROM K)
 );
 GO
 
@@ -318,8 +467,11 @@ GO
 fn_VerificationQueue(@AsOfBuild, @RigHoursPerWeek) -- the operational control.
 
 One row per requirement that is not current, ranked, with the action named and
-the rig cost attached. Bounded by rig capacity, because that is the constraint
-that decides what can actually happen next week.
+its cost attached in the two scarce resources: rig hours and airframe hours.
+Bounded by rig capacity, because that is the constraint that decides what can
+actually happen next week on the rigs. Airframe work is costed and ranked but
+never counted against the rig week: it needs a flight slot, which this data
+cannot schedule.
 --------------------------------------------------------------------------------
 */
 CREATE FUNCTION dbo.fn_VerificationQueue (@AsOfBuild INT, @RigHoursPerWeek DECIMAL(9,2))
@@ -332,14 +484,15 @@ AS RETURN
                                  AND v.StaleByRequirement = 0 THEN 1 ELSE 0 END
         FROM dbo.fn_RequirementVerification(@AsOfBuild) v
     ),
+    -- The requirement's EXISTING test set, for context. Not the cost: the cost
+    -- is what the action needs (fn_VerificationCost), which may be fewer
+    -- cases, none, or a case that has not been written yet.
     Cost AS (
         SELECT v.RequirementKey,
-               RigHours = CAST(ISNULL(SUM(tlr.RigHours), 0) AS DECIMAL(9,2)),
                TestMinutes = ISNULL(SUM(tc.ExpectedDurationMin), 0),
                Cases = COUNT(*)
         FROM V v
-        JOIN dbo.Dim_TestCase tc      ON tc.RequirementKey = v.RequirementKey
-        JOIN dbo.Ref_TestLevelRank tlr ON tlr.TestLevel     = tc.TestLevel
+        JOIN dbo.Dim_TestCase tc ON tc.RequirementKey = v.RequirementKey
         GROUP BY v.RequirementKey
     ),
     Scored AS (
@@ -348,20 +501,16 @@ AS RETURN
             v.SubsystemCode, v.SubsystemName, v.Criticality, v.RequiresHILRig,
             v.HasEvidence, v.MeetsPolicy, v.StaleByCode, v.StaleByRequirement,
             v.PassingButUnderLevelled, v.PassingButSelfVerified,
-            v.LastGoodBuild, v.InterveningBuilds, v.MinTestLevel,
+            v.LastPassBuild, v.LastGoodBuild, v.InterveningBuilds, v.MinTestLevel,
             p.PersonID AS OwnerID, p.PersonName AS OwnerName, p.Team AS OwnerTeam,
-            c.RigHours, c.TestMinutes, c.Cases,
+            k.RigHours, k.AirframeHours, k.NeedsNewCase, k.SignatureOnly,
+            c.TestMinutes, c.Cases,
 
-            -- Named action. The state decides the work, and the four states
-            -- need genuinely different work -- which is the argument for
-            -- separating them rather than reporting one "not done" bucket.
-            ActionCode = CASE
-                WHEN v.HasEvidence = 0                             THEN 'VERIFY'
-                WHEN v.MeetsPolicy = 0 AND v.PassingButSelfVerified > 0
-                                        AND v.PassingButUnderLevelled = 0 THEN 'INDEPENDENT_WITNESS'
-                WHEN v.MeetsPolicy = 0                             THEN 'RAISE_TEST_LEVEL'
-                WHEN v.StaleByRequirement = 1                      THEN 'REVIEW_THEN_RERUN'
-                ELSE                                                    'RERUN' END,
+            -- Named action, from fn_VerificationCost: the state decides the
+            -- work, and the four states need genuinely different work -- which
+            -- is the argument for separating them rather than reporting one
+            -- "not done" bucket. Defined once, beside the cost it drives.
+            k.ActionCode,
 
             -- Priority score, 0-100, four weighted terms so a reviewer can see
             -- which one is driving a given rank rather than trusting a single
@@ -382,20 +531,26 @@ AS RETURN
                 AS DECIMAL(6,2))
         FROM V v
         JOIN dbo.Dim_Person p ON p.PersonKey = v.OwnerKey
+        JOIN dbo.fn_VerificationCost(@AsOfBuild) k ON k.RequirementKey = v.RequirementKey
         LEFT JOIN Cost c      ON c.RequirementKey = v.RequirementKey
         WHERE v.IsCurrent = 0
     ),
     Ranked AS (
         SELECT s.*,
+               -- Ties broken on TOTAL hardware hours, cheapest first -- the
+               -- same quantity the tie-break used before the two resources were
+               -- separated, so a rank moves only where an item's cost moved.
                PriorityRank = ROW_NUMBER() OVER (
-                    ORDER BY s.PriorityScore DESC, s.RigHours ASC, s.RequirementID),
-               -- Cumulative rig hours in priority order. The bound is applied
+                    ORDER BY s.PriorityScore DESC, s.RigHours + s.AirframeHours ASC, s.RequirementID),
+               -- Cumulative RIG hours in priority order. The bound is applied
                -- to this, not to a row count: ten requirements needing eight
                -- rig hours each is not the same week of work as ten needing
                -- none, and a queue that cannot tell them apart will be
-               -- abandoned by the people it is for.
+               -- abandoned by the people it is for. Airframe hours are not in
+               -- it: a flight does not use a rig, and adding the two divided
+               -- the airframe's work by the capacity of six rigs.
                CumulativeRigHours = SUM(s.RigHours) OVER (
-                    ORDER BY s.PriorityScore DESC, s.RigHours ASC, s.RequirementID
+                    ORDER BY s.PriorityScore DESC, s.RigHours + s.AirframeHours ASC, s.RequirementID
                     ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
         FROM Scored s
     )
@@ -404,17 +559,30 @@ AS RETURN
         r.SubsystemCode, r.SubsystemName, r.Criticality,
         r.OwnerID, r.OwnerName, r.OwnerTeam,
         r.MinTestLevel, r.LastGoodBuild, r.InterveningBuilds,
-        r.Cases, r.RigHours, r.TestMinutes, r.CumulativeRigHours,
-        r.PriorityScore, r.ActionCode,
-        IsThisWeek = CAST(CASE WHEN r.CumulativeRigHours <= @RigHoursPerWeek THEN 1 ELSE 0 END AS BIT),
+        r.Cases, r.RigHours, r.AirframeHours, r.TestMinutes, r.CumulativeRigHours,
+        r.PriorityScore, r.ActionCode, r.NeedsNewCase,
+        -- The rig week: the priority-ordered prefix whose rig hours fit the
+        -- capacity. An item that needs the airframe is never in it, however
+        -- high it ranks -- the rig week cannot book a flight.
+        IsThisWeek = CAST(CASE WHEN r.AirframeHours = 0
+                                AND r.CumulativeRigHours <= @RigHoursPerWeek THEN 1 ELSE 0 END AS BIT),
         RecommendedAction = CASE r.ActionCode
             WHEN 'VERIFY'  THEN 'No passing evidence exists. Write and run the test before the gate review; this is not a re-run, it is first-time verification.'
             WHEN 'RERUN'   THEN CONCAT('Evidence was valid at build ', r.LastGoodBuild, ' but the subsystem has changed in ',
                                        r.InterveningBuilds, ' builds since. Re-run on the release candidate.')
             WHEN 'REVIEW_THEN_RERUN' THEN 'The requirement itself was modified after it was verified. Confirm the test still checks the right thing, then re-run -- re-running first risks certifying against the old wording.'
             WHEN 'RAISE_TEST_LEVEL'  THEN CONCAT('Passing evidence sits below the ', r.MinTestLevel,
-                                       ' level this requirement type demands. Book rig time; a lower-level pass is not admissible.')
-            ELSE 'Verified by its own owner against a policy requiring independence. Re-witness with a second engineer; the test need not be re-executed if nothing has changed.'
+                                       ' level this requirement type demands, and a lower-level pass is not admissible. ',
+                                       CASE WHEN r.NeedsNewCase = 1
+                                            THEN CONCAT('No ', r.MinTestLevel, '-level test exists yet: write one and run it')
+                                            ELSE 'Run its tests at or above that level' END,
+                                       CASE WHEN r.AirframeHours > 0 THEN ' on the airframe -- a flight slot, not rig time.'
+                                            WHEN r.RigHours > 0      THEN ' on the rig.'
+                                            ELSE ' against real neighbours; no rig time is needed.' END)
+            ELSE CASE WHEN r.SignatureOnly = 1
+                 THEN 'Verified by its own owner against a policy requiring independence. Nothing has changed since that pass, so a second engineer reviews and countersigns it; no re-execution and no rig time.'
+                 ELSE CONCAT('Verified by its own owner at build ', r.LastPassBuild,
+                             ', and the subsystem or the requirement has changed since. Re-run it on the release candidate witnessed by a second engineer; a countersignature now would certify superseded evidence.') END
         END,
         AsOfBuild = @AsOfBuild
     FROM Ranked r
@@ -424,9 +592,10 @@ GO
 /*
 vw_VerificationQueue -- one rig-week.
 
-180 hours is six rigs at 30 bookable hours. It is a parameter rather than a
-constant in the view precisely so a programme manager can ask "what if we add
-a rig" without editing SQL.
+180 hours is six rigs at 30 bookable hours, and it bounds rig work only: Field
+runs need the airframe and are costed in AirframeHours, beside the week rather
+than inside it. It is a parameter rather than a constant in the view precisely
+so a programme manager can ask "what if we add a rig" without editing SQL.
 */
 CREATE VIEW dbo.vw_VerificationQueue AS
 SELECT * FROM dbo.fn_VerificationQueue(
@@ -439,6 +608,7 @@ GO
 -- =============================================================================
 DECLARE @missing VARCHAR(400) = '';
 IF OBJECT_ID('dbo.fn_RAIDExposure','IF')       IS NULL SET @missing += 'fn_RAIDExposure ';
+IF OBJECT_ID('dbo.fn_VerificationCost','IF')   IS NULL SET @missing += 'fn_VerificationCost ';
 IF OBJECT_ID('dbo.fn_SubsystemReadiness','IF') IS NULL SET @missing += 'fn_SubsystemReadiness ';
 IF OBJECT_ID('dbo.fn_ReadinessKPI','IF')       IS NULL SET @missing += 'fn_ReadinessKPI ';
 IF OBJECT_ID('dbo.fn_VerificationQueue','IF')  IS NULL SET @missing += 'fn_VerificationQueue ';
@@ -455,5 +625,20 @@ DECLARE @queued     INT = (SELECT COUNT(*) FROM dbo.vw_VerificationQueue);
 IF @notCurrent <> @queued
     THROW 52041, 'The verification queue does not contain exactly the non-current requirements.', 1;
 
-PRINT 'KPI objects created and verified: readiness scorecard, subsystem cut, RAID exposure, verification queue.';
+-- The three places the hours are published must agree, per resource, and the
+-- rig week must hold no airframe work. They read one cost function, so a
+-- difference here means somebody re-derived it.
+DECLARE @qRig DECIMAL(11,2), @qAir DECIMAL(11,2), @airInWeek INT;
+SELECT @qRig = SUM(RigHours), @qAir = SUM(AirframeHours),
+       @airInWeek = SUM(CASE WHEN IsThisWeek = 1 AND AirframeHours > 0 THEN 1 ELSE 0 END)
+FROM dbo.vw_VerificationQueue;
+IF @qRig <> (SELECT RigHoursOutstanding FROM dbo.vw_ReadinessKPI)
+OR @qRig <> (SELECT SUM(RigHoursOutstanding) FROM dbo.vw_SubsystemReadiness)
+OR @qAir <> (SELECT AirframeHoursOutstanding FROM dbo.vw_ReadinessKPI)
+OR @qAir <> (SELECT SUM(AirframeHoursOutstanding) FROM dbo.vw_SubsystemReadiness)
+    THROW 52042, 'Rig or airframe hours disagree between the queue, the scorecard and the subsystem cut.', 1;
+IF @airInWeek <> 0
+    THROW 52043, 'The rig week contains airframe work.', 1;
+
+PRINT 'KPI objects created and verified: verification cost, readiness scorecard, subsystem cut, RAID exposure, verification queue.';
 GO

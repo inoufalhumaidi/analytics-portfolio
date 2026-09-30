@@ -26,7 +26,7 @@ the case study both derive from it; if they disagree, this is right.
 | **BR-06** | Readiness must be answerable at any build, not only today | Programme board | M | `@AsOfBuild` on every function; `usp_ReadinessTrend` | UAT-04, UAT-05 | Build 40 leaks no later run (0/0); work-item completion differs early vs late (84.6 < 93.9) | PASS |
 | **BR-07** | Produce a ranked worklist bounded by the constraining resource | Test manager | M | `fn_VerificationQueue`, `CumulativeRigHours`, `IsThisWeek` | UAT-10, UAT-13 | Queue holds exactly the 226 non-current requirements; nothing in the week exceeds 180 rig hours; doubling the rig widens the week 40 → 88 | PASS |
 | **BR-08** | Name the action, not just the gap | Test manager | M | `ActionCode` + `RecommendedAction` (5 codes) | UAT-11, UAT-12 | Every item has a recognised code and an instruction; 0 action codes disagree with the requirement's state | PASS |
-| **BR-09** | Quantify the remaining work in the constraining resource | Programme board | M | `RigHoursOutstanding`, `RigWeeksOutstanding` | Workbook check 12 | 610.0 rig hours = 3.4 rig-weeks; Excel and SQL agree | PASS |
+| **BR-09** | Quantify the remaining work in the constraining resource | Programme board | M | `RigHoursOutstanding`, `RigWeeksOutstanding` | Workbook checks 12-13 | 425.0 rig hours = 2.4 rig-weeks, plus 272.0 airframe hours never divided by rig capacity; Excel and SQL agree | PASS |
 | **BR-10** | Score RAID from an agreed matrix, not a multiplication | Programme board | S | `Ref_RAIDMatrix`; `fn_RAIDExposure` joins it | UAT-19 | 0 mismatches against the matrix, and 1×5 ≠ 5×1 confirms it is not a product | PASS |
 | **BR-11** | An item due before it was raised is a data defect, not an overdue item | Programme board | S | `IsOverdue` excludes `DueDate < RaisedDate` | UAT-20 | 7 such items exist; 0 counted overdue | PASS |
 | **BR-23** | The RAID register must answer for the date asked, not for today | Programme board | M | `fn_RAIDExposure` derives `IsOpen` from the dates; `RAIDStatusAsOf` reconstructs status | UAT-23 | At 2025-06-30: 18 reported open, 18 genuinely open; 0 overdue-but-closed | PASS |
@@ -35,8 +35,8 @@ the case study both derive from it; if they disagree, this is right.
 | **BR-14** | The data-quality gate must be able to stop the build | Release engineering | M | `usp_RunDataQualityChecks` raises 52030 | Exit-code check | Passes at default (exit 0); raises and exits 1 at a 1.000% tolerance | PASS |
 | **BR-15** | The dataset must rebuild byte for byte | Reviewer | M | `dbo.fn_Rand` — SHA2_256 of a stable key | UAT-22 | Fingerprints 8806 / 135 reproduce on a rebuild | PASS |
 | **BR-16** | Every figure reproducible outside the BI tool | Analyst | M | 7 `@AsOf`-aware procedures in `sql/06_stored_procedures.sql` | UAT-21 | Procedures raise on an unknown build, a zero rig capacity and a reversed range | PASS |
-| **BR-17** | An Excel control, not a static report | Test manager | M | `excel/Build_Workbook.ps1` — every dashboard figure a formula over the extracts | `Validate_Workbook.ps1` | 16 of 16 reconcile; no error values anywhere in the file | PASS |
-| **BR-18** | Headline figures implemented twice and reconciled | Reviewer | M | T-SQL and Excel formulas, independently | Validation sheet | 16/16 agree to 0.01; both sides of the headline comparison computed in Excel, not copied | PASS |
+| **BR-17** | An Excel control, not a static report | Test manager | M | `excel/Build_Workbook.ps1` — every dashboard figure a formula over the extracts | `Validate_Workbook.ps1` | 17 of 17 reconcile; no error values anywhere in the file | PASS |
+| **BR-18** | Headline figures implemented twice and reconciled | Reviewer | M | T-SQL and Excel formulas, independently | Validation sheet | 17/17 agree to 0.01; both sides of the headline comparison computed in Excel, not copied | PASS |
 | **BR-19** | Publish the reported metric ALONGSIDE the real one | Programme board | M | `WorkItemCompletionPct` and `ShipReadinessPct` in the same view and adjacent on the dashboard | Workbook checks 3, 7 | 93.86% and 51.96% shown together; gap 41.90 points | PASS |
 | **BR-20** | Show where the gap is, not just that it exists | Chief engineer | M | `fn_SubsystemReadiness` | UAT-14 | Subsystem cut sums to the programme totals: 146/281 both ways | PASS |
 | **BR-21** | The verification states must partition the population | Reviewer | S | `VerificationState` in `vw_RequirementVerification` | UAT-01 | 519 requirements, 519 classified, no leftovers | PASS |
@@ -50,7 +50,7 @@ Recorded so that a reader can tell a deliberate boundary from an oversight.
 
 | ID | Requirement | Why it is out of scope |
 |---|---|---|
-| NS-01 | Cost and effort forecasting | Rig hours bound the queue, but there is no budget, labour rate or critical path. "3.4 rig-weeks" is a capacity statement, not a schedule forecast. |
+| NS-01 | Cost and effort forecasting | Rig hours bound the queue, but there is no budget, labour rate or critical path. "2.4 rig-weeks" is a capacity statement, not a schedule forecast, and airframe hours have no capacity to divide by. |
 | NS-02 | Partial credit for staleness | A subsystem that changed once and one that changed eleven times both mark a verification stale. `InterveningBuilds` drives the ranking, but readiness stays binary — a partial-credit ship gate is not a ship decision. |
 | NS-03 | Test-level substitution rules | `Unit < Integration < HIL < Field` assumes field evidence subsumes rig evidence. On a real programme some instrumented rig data cannot be replaced by a flight, and the policy table cannot express that. |
 | NS-04 | Requirement dependency graph | Requirements are treated as independent. A real programme has parent/child decomposition where verifying a child contributes to a parent. |
@@ -87,7 +87,7 @@ Recorded so that a reader can tell a deliberate boundary from an oversight.
 | UAT-22 | Reproducibility | Fingerprints reproduce | Yes |
 | UAT-23 | RAID | Openness is as-of correct at a HISTORICAL date | Yes — **fails against the pre-fix code** (12 vs 18) |
 
-**23 of 23 pass.** The suite asserts an expected case count before reporting and raises if the two
+**25 of 25 pass.** The suite asserts an expected case count before reporting and raises if the two
 disagree — a run that dies partway through otherwise prints a pass count covering only the cases
 that executed, which is indistinguishable from a clean run of a shorter suite.
 
@@ -111,5 +111,5 @@ Stated rather than quietly omitted:
   usefully assert that a *different* script returns a non-zero exit code; it is checked by running
   the gate at a tightened tolerance and reading `$?`. The command is in the validation report.
 - **No requirement covers the Power BI layer's correctness.** `Validate_PowerBI_Model.ps1`
-  reconciles 29 figures against SQL, but no BR row demands it, so it is currently an
+  reconciles 30 figures against SQL, but no BR row demands it, so it is currently an
   over-delivery rather than a traced requirement.

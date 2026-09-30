@@ -368,21 +368,32 @@ INSERT INTO #UATResults VALUES ('UAT-12','Priority queue',
  'Sending a team to re-run a test when the requirement itself was reworded certifies against the old wording. The action has to follow the state, not the other way round.');
 
 /* ---------------------------------------------------------------------------
-UAT-13  The week's work respects the rig-hour bound, and the bound bites.
+UAT-13  The week's work respects the rig-hour bound, the bound bites, and
+        airframe work is never counted against it.
 
         Asserts the VALUE of the boundary, not just that a flag exists: the
-        last included item fits and the first excluded one does not.
+        last included item fits and the first excluded one does not. The
+        running total must be RIG hours only -- its last value equals the sum
+        of RigHours -- because adding Field hours to it divided the airframe's
+        work by the capacity of six rigs.
 --------------------------------------------------------------------------- */
-DECLARE @overBound INT = (SELECT COUNT(*) FROM dbo.fn_VerificationQueue(@RC, 180.00)
-                          WHERE IsThisWeek = 1 AND CumulativeRigHours > 180.00);
-DECLARE @thisWeek INT = (SELECT COUNT(*) FROM dbo.fn_VerificationQueue(@RC, 180.00) WHERE IsThisWeek = 1);
+DECLARE @overBound INT, @thisWeek INT, @airInWeek INT, @cumEnd DECIMAL(11,2), @rigSum DECIMAL(11,2);
+SELECT @overBound = SUM(CASE WHEN IsThisWeek = 1 AND CumulativeRigHours > 180.00 THEN 1 ELSE 0 END),
+       @thisWeek  = SUM(CAST(IsThisWeek AS INT)),
+       @airInWeek = SUM(CASE WHEN IsThisWeek = 1 AND AirframeHours > 0 THEN 1 ELSE 0 END),
+       @cumEnd    = MAX(CumulativeRigHours),
+       @rigSum    = SUM(RigHours)
+FROM dbo.fn_VerificationQueue(@RC, 180.00);
 DECLARE @thisWeekDouble INT = (SELECT COUNT(*) FROM dbo.fn_VerificationQueue(@RC, 360.00) WHERE IsThisWeek = 1);
 INSERT INTO #UATResults VALUES ('UAT-13','Priority queue',
- 'Nothing in the week exceeds the rig bound, and doubling the rig widens the week',
- '0 over, more work at 360h',
- CAST(@overBound AS VARCHAR(10)) + ' over, ' + CAST(@thisWeek AS VARCHAR(10)) + ' -> ' + CAST(@thisWeekDouble AS VARCHAR(10)),
- CASE WHEN @overBound = 0 AND @thisWeekDouble > @thisWeek THEN 'PASS' ELSE 'FAIL' END,
- 'A capacity bound that does not respond to capacity is a hardcoded row count wearing a parameter, and it cannot answer "what if we add a rig".');
+ 'Nothing in the week exceeds the rig bound or needs the airframe, the running total is rig hours only, and doubling the rig widens the week',
+ '0 over, 0 airframe, total = rig sum, more work at 360h',
+ CAST(@overBound AS VARCHAR(10)) + ' over, ' + CAST(@airInWeek AS VARCHAR(10)) + ' airframe, '
+   + CASE WHEN @cumEnd = @rigSum THEN 'total = rig sum' ELSE 'total <> rig sum' END + ', '
+   + CAST(@thisWeek AS VARCHAR(10)) + ' -> ' + CAST(@thisWeekDouble AS VARCHAR(10)),
+ CASE WHEN @overBound = 0 AND @airInWeek = 0 AND @cumEnd = @rigSum AND @thisWeekDouble > @thisWeek
+      THEN 'PASS' ELSE 'FAIL' END,
+ 'A capacity bound that does not respond to capacity is a hardcoded row count wearing a parameter, and one that counts a flight against the rigs answers "what if we add a rig" with a date the rigs cannot deliver.');
 
 /* ---------------------------------------------------------------------------
 UAT-14  Subsystem readiness reconciles to the overall figure.
@@ -550,6 +561,91 @@ INSERT INTO #UATResults VALUES ('UAT-23','RAID',
  CASE WHEN @raidReported = @raidTruly AND @raidOverdueClosed = 0 THEN 'PASS' ELSE 'FAIL' END,
  'A procedure advertising an as-of date that silently answers about today is worse than one that never offered the parameter: the caller has no way to know the answer is not the one they asked for.');
 
+/* ---------------------------------------------------------------------------
+UAT-24  Each queued requirement is costed by what its ACTION needs -- regression.
+
+        fn_VerificationQueue charged every requirement the rig hours of ALL its
+        existing test cases, whatever its action said: a self-verified pass
+        that needed only a countersignature was charged its full test hours
+        (REQ-0124, REQ-0002); a requirement with no test at its policy level
+        was charged its lower-level tests, so 89 of 110 RAISE_TEST_LEVEL items
+        cost 0 h; Regulatory items were charged HIL runs the authority does not
+        accept. At the release candidate the old RigHours differed from the
+        correct cost on 77 of the 226 rows.
+
+        Recomputed here independently, at TEST-CASE grain with window
+        functions: admissibility from Ref_VerificationPolicy.MinTestLevelRank
+        (the implementation joins Ref_TestLevelRank on MinTestLevel), prices
+        written out (HIL 2.50, Field 8.00 -- 01_create_schema.sql, so a change
+        to the price table fails here and forces the documents to move with
+        it), and "nothing changed since the pass" as "the last change predates
+        it" rather than NOT EXISTS.
+--------------------------------------------------------------------------- */
+DECLARE @costRows INT, @costMismatch INT;
+SELECT @costRows = COUNT(*),
+       @costMismatch = SUM(CASE WHEN q.RigHours <> e.ExpRig OR q.AirframeHours <> e.ExpAir THEN 1 ELSE 0 END)
+FROM dbo.fn_VerificationQueue(@RC, 180.00) q
+JOIN (
+    SELECT x.RequirementID,
+           ExpRig = CASE
+               WHEN x.ActionCode = 'INDEPENDENT_WITNESS' AND x.LastPassBuild >= ISNULL(x.LastMove, 0) THEN 0
+               WHEN x.AdmCases = 0 THEN CASE x.MinTestLevel WHEN 'HIL' THEN 2.50 ELSE 0 END
+               ELSE x.AdmHIL END,
+           ExpAir = CASE
+               WHEN x.ActionCode = 'INDEPENDENT_WITNESS' AND x.LastPassBuild >= ISNULL(x.LastMove, 0) THEN 0
+               WHEN x.AdmCases = 0 THEN CASE x.MinTestLevel WHEN 'Field' THEN 8.00 ELSE 0 END
+               ELSE x.AdmField END
+    FROM (
+        SELECT DISTINCT q2.RequirementID, q2.ActionCode, v.MinTestLevel, v.LastPassBuild,
+               LastMove = (SELECT MAX(b.BuildNumber) FROM (
+                               SELECT c.BuildKey FROM dbo.Fact_BuildSubsystemChange c WHERE c.SubsystemKey = v.SubsystemKey
+                               UNION ALL
+                               SELECT rc.BuildKey FROM dbo.Fact_RequirementChange rc
+                               WHERE rc.RequirementKey = v.RequirementKey AND rc.ChangeType = 'Modified') m
+                           JOIN dbo.Dim_Build b ON b.BuildKey = m.BuildKey WHERE b.BuildNumber <= @RC),
+               AdmCases = COUNT(CASE WHEN r.LevelRank >= pol.MinTestLevelRank THEN tc.TestCaseKey END)
+                              OVER (PARTITION BY q2.RequirementID),
+               AdmHIL   = SUM(CASE WHEN r.LevelRank >= pol.MinTestLevelRank AND tc.TestLevel = 'HIL'   THEN 2.50 ELSE 0 END)
+                              OVER (PARTITION BY q2.RequirementID),
+               AdmField = SUM(CASE WHEN r.LevelRank >= pol.MinTestLevelRank AND tc.TestLevel = 'Field' THEN 8.00 ELSE 0 END)
+                              OVER (PARTITION BY q2.RequirementID)
+        FROM dbo.fn_VerificationQueue(@RC, 180.00) q2
+        JOIN dbo.fn_RequirementVerification(@RC) v ON v.RequirementID = q2.RequirementID
+        JOIN dbo.Ref_VerificationPolicy pol ON pol.ReqType = v.ReqType
+        JOIN dbo.Dim_TestCase tc ON tc.RequirementKey = v.RequirementKey
+        JOIN dbo.Ref_TestLevelRank r ON r.TestLevel = tc.TestLevel
+    ) x
+) e ON e.RequirementID = q.RequirementID;
+DECLARE @queueRows INT = (SELECT COUNT(*) FROM dbo.fn_VerificationQueue(@RC, 180.00));
+INSERT INTO #UATResults VALUES ('UAT-24','Priority queue',
+ 'Every queued requirement costs the runs its action needs: admissible cases, one new case where none exists, nothing for an untouched self-verified pass',
+ CAST(@queueRows AS VARCHAR(10)) + ' rows / 0 mismatched',
+ CAST(@costRows AS VARCHAR(10)) + ' rows / ' + CAST(@costMismatch AS VARCHAR(10)),
+ CASE WHEN @costRows = @queueRows AND @costMismatch = 0 THEN 'PASS' ELSE 'FAIL' END,
+ 'Costing a requirement by the tests it happens to have charged a signature as rig time and made 49 HIL-level items look free. A schedule built on that cost is wrong in both directions at once.');
+
+/* ---------------------------------------------------------------------------
+UAT-25  Rig and airframe hours reconcile across the queue, the scorecard and
+        the subsystem cut, resource by resource.
+
+        A DIFFERENT GRAIN from UAT-24: three published aggregates, each summed
+        its own way. They read one cost function, so a difference means
+        somebody re-derived it -- which is how all three once agreed on 610
+        while charging the wrong thing.
+--------------------------------------------------------------------------- */
+DECLARE @qRig DECIMAL(11,2), @qAir DECIMAL(11,2), @kRig DECIMAL(11,2), @kAir DECIMAL(11,2),
+        @sRig DECIMAL(11,2), @sAir DECIMAL(11,2);
+SELECT @qRig = SUM(RigHours), @qAir = SUM(AirframeHours) FROM dbo.fn_VerificationQueue(@RC, 180.00);
+SELECT @kRig = RigHoursOutstanding, @kAir = AirframeHoursOutstanding FROM dbo.fn_ReadinessKPI(@RC, '2026-09-30');
+SELECT @sRig = SUM(RigHoursOutstanding), @sAir = SUM(AirframeHoursOutstanding) FROM dbo.fn_SubsystemReadiness(@RC);
+INSERT INTO #UATResults VALUES ('UAT-25','Aggregation',
+ 'Queue, scorecard and subsystem cut report the same rig hours and the same airframe hours',
+ 'rig ' + CAST(@qRig AS VARCHAR(20)) + ' x3, airframe ' + CAST(@qAir AS VARCHAR(20)) + ' x3',
+ 'rig ' + CAST(@kRig AS VARCHAR(20)) + '/' + CAST(@sRig AS VARCHAR(20))
+   + ', airframe ' + CAST(@kAir AS VARCHAR(20)) + '/' + CAST(@sAir AS VARCHAR(20)),
+ CASE WHEN @qRig = @kRig AND @qRig = @sRig AND @qAir = @kAir AND @qAir = @sAir THEN 'PASS' ELSE 'FAIL' END,
+ 'The scorecard quotes the backlog, the subsystem table says where it is and the queue says what to book. If they disagree, the board is being asked to act on three different backlogs.');
+
 /* ------------------------------ report ---------------------------------- */
 SELECT TestID, Area, Requirement, Expected, Actual, Verdict FROM #UATResults ORDER BY TestID;
 
@@ -558,7 +654,7 @@ SELECT TestID, Area, Requirement, Expected, Actual, Verdict FROM #UATResults ORD
 -- cases that executed, which is indistinguishable from a clean run of a
 -- shorter suite. Counting what ran is not the same as counting what should
 -- have run.
-DECLARE @ExpectedCases INT = 23;
+DECLARE @ExpectedCases INT = 25;
 DECLARE @ran INT = (SELECT COUNT(*) FROM #UATResults);
 IF @ran <> @ExpectedCases
 BEGIN

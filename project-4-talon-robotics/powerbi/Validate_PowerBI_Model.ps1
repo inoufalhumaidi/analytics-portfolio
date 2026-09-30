@@ -119,6 +119,7 @@ $checks = @(
 
     @{ N="Queue outstanding";          D="[Outstanding]";                   S="SELECT COUNT(*) FROM dbo.vw_VerificationQueue";       P=0 },
     @{ N="Rig hours outstanding";      D="[Rig Hours Outstanding]";         S="SELECT RigHoursOutstanding FROM dbo.vw_ReadinessKPI"; P=1 },
+    @{ N="Airframe hours outstanding"; D="[Airframe Hours Outstanding]";    S="SELECT AirframeHoursOutstanding FROM dbo.vw_ReadinessKPI"; P=1 },
     @{ N="Schedulable this week";      D="[Schedulable This Week]";         S="SELECT SUM(CAST(IsThisWeek AS INT)) FROM dbo.vw_VerificationQueue"; P=0 },
 
     @{ N="RAID open";                  D="[RAID Open]";                     S="SELECT COUNT(*) FROM dbo.vw_RAIDExposure WHERE IsOpen=1"; P=0 },

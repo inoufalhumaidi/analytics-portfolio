@@ -140,9 +140,9 @@ in
     # refresh and text in the next, and every lookup against it breaks.
     $queries = @(
       @{ N='tReq'; F='requirement_verification.csv'; T='{"RequirementID",type text},{"Title",type text},{"ReqType",type text},{"Priority",type text},{"SubsystemCode",type text},{"SubsystemName",type text},{"Criticality",type text},{"MinTestLevel",type text},{"RequiresIndependentTester",Int64.Type},{"TotalCases",Int64.Type},{"CasesWithRuns",Int64.Type},{"PassingCases",Int64.Type},{"BlockedCases",Int64.Type},{"LastPassBuild",Int64.Type},{"LastGoodBuild",Int64.Type},{"PassingButUnderLevelled",Int64.Type},{"PassingButSelfVerified",Int64.Type},{"HasEvidence",Int64.Type},{"MeetsPolicy",Int64.Type},{"StaleByCode",Int64.Type},{"StaleByRequirement",Int64.Type},{"IsCurrent",Int64.Type},{"VerificationState",type text},{"InterveningBuilds",Int64.Type},{"AsOfBuild",Int64.Type}' },
-      @{ N='tQueue'; F='verification_queue.csv'; T='{"PriorityRank",Int64.Type},{"RequirementID",type text},{"Title",type text},{"ReqType",type text},{"Priority",type text},{"SubsystemCode",type text},{"SubsystemName",type text},{"Criticality",type text},{"OwnerID",type text},{"OwnerName",type text},{"OwnerTeam",type text},{"MinTestLevel",type text},{"LastGoodBuild",Int64.Type},{"InterveningBuilds",Int64.Type},{"Cases",Int64.Type},{"RigHours",type number},{"TestMinutes",Int64.Type},{"CumulativeRigHours",type number},{"PriorityScore",type number},{"ActionCode",type text},{"IsThisWeek",Int64.Type},{"RecommendedAction",type text}' },
-      @{ N='tSub'; F='subsystem_readiness.csv'; T='{"SubsystemCode",type text},{"SubsystemName",type text},{"Criticality",type text},{"RequiresHILRig",Int64.Type},{"Requirements",Int64.Type},{"MustShip",Int64.Type},{"CurrentAll",Int64.Type},{"CurrentMustShip",Int64.Type},{"NoEvidence",Int64.Type},{"Insufficient",Int64.Type},{"StaleByCode",Int64.Type},{"StaleByReq",Int64.Type},{"ReadinessPct",type number},{"BuildsChanged",Int64.Type},{"LinesChanged",Int64.Type},{"LastChangeBuild",Int64.Type},{"RigHoursOutstanding",type number}' },
-      @{ N='tKPI'; F='readiness_kpi.csv'; T='{"AsOfBuild",Int64.Type},{"AsOfDate",type date},{"Requirements",Int64.Type},{"MustShipCount",Int64.Type},{"WorkItemCompletionPct",type number},{"VerificationCoveragePct",type number},{"ShipReadinessPct",type number},{"StaleVerificationPct",type number},{"PolicyCompliancePct",type number},{"NoEvidenceCount",Int64.Type},{"InsufficientCount",Int64.Type},{"StaleCount",Int64.Type},{"CurrentCount",Int64.Type},{"BlockedTestPct",type number},{"CriticalRAIDOpen",Int64.Type},{"OverdueRAIDPct",type number},{"TotalRAIDExposure",Int64.Type},{"RigHoursOutstanding",type number}' },
+      @{ N='tQueue'; F='verification_queue.csv'; T='{"PriorityRank",Int64.Type},{"RequirementID",type text},{"Title",type text},{"ReqType",type text},{"Priority",type text},{"SubsystemCode",type text},{"SubsystemName",type text},{"Criticality",type text},{"OwnerID",type text},{"OwnerName",type text},{"OwnerTeam",type text},{"MinTestLevel",type text},{"LastGoodBuild",Int64.Type},{"InterveningBuilds",Int64.Type},{"Cases",Int64.Type},{"RigHours",type number},{"AirframeHours",type number},{"TestMinutes",Int64.Type},{"CumulativeRigHours",type number},{"PriorityScore",type number},{"ActionCode",type text},{"NeedsNewCase",Int64.Type},{"IsThisWeek",Int64.Type},{"RecommendedAction",type text}' },
+      @{ N='tSub'; F='subsystem_readiness.csv'; T='{"SubsystemCode",type text},{"SubsystemName",type text},{"Criticality",type text},{"RequiresHILRig",Int64.Type},{"Requirements",Int64.Type},{"MustShip",Int64.Type},{"CurrentAll",Int64.Type},{"CurrentMustShip",Int64.Type},{"NoEvidence",Int64.Type},{"Insufficient",Int64.Type},{"StaleByCode",Int64.Type},{"StaleByReq",Int64.Type},{"ReadinessPct",type number},{"BuildsChanged",Int64.Type},{"LinesChanged",Int64.Type},{"LastChangeBuild",Int64.Type},{"RigHoursOutstanding",type number},{"AirframeHoursOutstanding",type number}' },
+      @{ N='tKPI'; F='readiness_kpi.csv'; T='{"AsOfBuild",Int64.Type},{"AsOfDate",type date},{"Requirements",Int64.Type},{"MustShipCount",Int64.Type},{"WorkItemCompletionPct",type number},{"VerificationCoveragePct",type number},{"ShipReadinessPct",type number},{"StaleVerificationPct",type number},{"PolicyCompliancePct",type number},{"NoEvidenceCount",Int64.Type},{"InsufficientCount",Int64.Type},{"StaleCount",Int64.Type},{"CurrentCount",Int64.Type},{"BlockedTestPct",type number},{"CriticalRAIDOpen",Int64.Type},{"OverdueRAIDPct",type number},{"TotalRAIDExposure",Int64.Type},{"RigHoursOutstanding",type number},{"AirframeHoursOutstanding",type number}' },
       @{ N='tTrend'; F='readiness_trend.csv'; T='{"BuildNumber",Int64.Type},{"BuildID",type text},{"BuildDate",type date},{"WorkItemCompletionPct",type number},{"VerificationCoveragePct",type number},{"ShipReadinessPct",type number},{"StaleVerificationPct",type number},{"ReadinessGapVsReported",type number}' },
       @{ N='tRAID'; F='raid_register.csv'; T='{"RAIDID",type text},{"RAIDType",type text},{"Title",type text},{"SubsystemCode",type text},{"SubsystemName",type text},{"Criticality",type text},{"OwnerID",type text},{"OwnerName",type text},{"OwnerTeam",type text},{"RaisedDate",type date},{"DueDate",type date},{"ClosedDate",type date},{"Probability",Int64.Type},{"Impact",Int64.Type},{"ExposureScore",Int64.Type},{"ExposureBand",type text},{"RAIDStatus",type text},{"IsOpen",Int64.Type},{"IsOverdue",Int64.Type},{"DaysOverdue",Int64.Type},{"AgeDays",Int64.Type},{"MitigationNote",type text}' },
       @{ N='tWork'; F='work_items.csv'; T='{"WorkItemID",type text},{"RequirementID",type text},{"Priority",type text},{"SubsystemCode",type text},{"AssignedToID",type text},{"AssignedToName",type text},{"OpenedDate",type date},{"ClosedDate",type date},{"EstimateHours",type number},{"ActualHours",type number},{"WorkItemStatus",type text}' },
@@ -208,18 +208,22 @@ in
         $calc.Range("B$rr").Formula = "=INDEX(tQueue[RequirementID],MATCH(A$rr,tQueue[PriorityRank],0))"
         $calc.Range("C$rr").Formula = "=INDEX(tQueue[RigHours],MATCH(A$rr,tQueue[PriorityRank],0))"
         $calc.Range("D$rr").Formula = "=IF(ROW()=$qFirst,C$rr,D$($rr-1)+C$rr)"
-        $calc.Range("E$rr").Formula = "=IF(D$rr<=RigHoursPerWeek,1,0)"
+        $calc.Range("E$rr").Formula = "=INDEX(tQueue[AirframeHours],MATCH(A$rr,tQueue[PriorityRank],0))"
+        # In the week: the rig-hour prefix fits, and the item needs no flight --
+        # the rig week cannot book the airframe.
+        $calc.Range("F$rr").Formula = "=IF(AND(D$rr<=RigHoursPerWeek,E$rr=0),1,0)"
     }
     # Named so the Dashboard can point at it. Without this the block was
     # computed and then referenced by nothing at all.
-    $wb.Names.Add('CalcWithinWeek', $calc.Range("E$($qFirst):E$($qFirst + $nQueue - 1)")) | Out-Null
+    $wb.Names.Add('CalcWithinWeek', $calc.Range("F$($qFirst):F$($qFirst + $nQueue - 1)")) | Out-Null
 
     $calc.Range("A3").Value2 = 'Rank'
     $calc.Range("B3").Value2 = 'RequirementID'
     $calc.Range("C3").Value2 = 'RigHours'
     $calc.Range("D3").Value2 = 'Cumulative rig hours (Excel, independent of SQL)'
-    $calc.Range("E3").Value2 = 'Within the week'
-    $calc.Range("A3:E3").Font.Bold = $true
+    $calc.Range("E3").Value2 = 'Airframe hours (never in the rig week)'
+    $calc.Range("F3").Value2 = 'Within the week'
+    $calc.Range("A3:F3").Font.Bold = $true
     $calc.Columns.Item(4).ColumnWidth = 40
     Write-Host "  Calc sheet               built ($nQueue queue rows)"
 
@@ -343,6 +347,10 @@ in
     # -- the one figure on the sheet that could not respond to it.
     $d.Range("A$($sr+4)").Value2 = 'Schedulable this week'
     $d.Range("B$($sr+4)").Formula = '=SUM(CalcWithinWeek)'
+    $d.Range("A$($sr+5)").Value2 = 'Airframe hours to clear them'
+    $d.Range("B$($sr+5)").Formula = '=SUM(tQueue[AirframeHours])'
+    $d.Range("B$($sr+5)").NumberFormat = '0.0'
+    $d.Range("C$($sr+5)").Value2 = 'Field evidence needs the airframe, not a rig. Never divided by rig capacity; the data holds no airframe capacity, so it is not turned into weeks.'
 
     # Named, so the validator and any future reader address these by name
     # rather than by cell. This block sits below the subsystem table, so its
@@ -353,6 +361,7 @@ in
     $wb.Names.Add('RigHoursOutstanding',  $d.Range("B$($sr+2)")) | Out-Null
     $wb.Names.Add('RigWeeksOutstanding',  $d.Range("B$($sr+3)")) | Out-Null
     $wb.Names.Add('SchedulableThisWeek',  $d.Range("B$($sr+4)")) | Out-Null
+    $wb.Names.Add('AirframeHoursOutstanding', $d.Range("B$($sr+5)")) | Out-Null
 
     $d.Columns.Item(1).ColumnWidth = 30
     $d.Columns.Item(2).ColumnWidth = 14
@@ -368,23 +377,24 @@ in
     $q.Range('A1').Font.Size = 14; $q.Range('A1').Font.Bold = $true; $q.Range('A1').Font.Color = $Slate
     $q.Range('A2').Formula = '="Ranked by priority score. The first "&SUM(CalcWithinWeek)&" rows fit inside "&RigHoursPerWeek&" rig hours -- one week. A list of everything outstanding is not a plan."'
     $q.Range('A2').Font.Italic = $true; $q.Range('A2').Font.Color = $GreyTxt
-    $qh = @('Rank','Requirement','Subsystem','Type','Priority','Owner','Action','Rig hrs','Cumulative','This week','What to do')
+    $qh = @('Rank','Requirement','Subsystem','Type','Priority','Owner','Action','Rig hrs','Airframe hrs','Cumulative rig','This week','What to do')
     for ($i = 0; $i -lt $qh.Count; $i++) { $q.Cells.Item(4, $i + 1).Value2 = $qh[$i] }
-    $q.Range('A4:K4').Font.Bold = $true; $q.Range('A4:K4').Interior.Color = $Slate; $q.Range('A4:K4').Font.Color = $White
+    $q.Range('A4:L4').Font.Bold = $true; $q.Range('A4:L4').Interior.Color = $Slate; $q.Range('A4:L4').Font.Color = $White
     $show = [Math]::Min($nQueue, 30)
     for ($i = 0; $i -lt $show; $i++) {
         $rr = 5 + $i; $k = $i + 1
         $q.Range("A$rr").Formula = "=$k"
         foreach ($m in @(@('B','RequirementID'),@('C','SubsystemCode'),@('D','ReqType'),@('E','Priority'),
-                         @('F','OwnerName'),@('G','ActionCode'),@('H','RigHours'),@('I','CumulativeRigHours'),
-                         @('J','IsThisWeek'),@('K','RecommendedAction'))) {
+                         @('F','OwnerName'),@('G','ActionCode'),@('H','RigHours'),@('I','AirframeHours'),
+                         @('J','CumulativeRigHours'),@('K','IsThisWeek'),@('L','RecommendedAction'))) {
             $q.Range("$($m[0])$rr").Formula = "=INDEX(tQueue[$($m[1])],MATCH(`$A$rr,tQueue[PriorityRank],0))"
         }
         $q.Range("H$rr").NumberFormat = '0.0'
         $q.Range("I$rr").NumberFormat = '0.0'
+        $q.Range("J$rr").NumberFormat = '0.0'
     }
     $lastQ = 4 + $show
-    $fcQ = $q.Range("A5:K$lastQ").FormatConditions.Add(2, 0, "=`$J5=1")
+    $fcQ = $q.Range("A5:L$lastQ").FormatConditions.Add(2, 0, "=`$K5=1")
     $fcQ.Interior.Color = $GoodBg
     $q.Columns.Item(1).ColumnWidth = 6
     $q.Columns.Item(2).ColumnWidth = 13
@@ -393,7 +403,7 @@ in
     $q.Columns.Item(5).ColumnWidth = 12
     $q.Columns.Item(6).ColumnWidth = 22
     $q.Columns.Item(7).ColumnWidth = 22
-    $q.Columns.Item(11).ColumnWidth = 96
+    $q.Columns.Item(12).ColumnWidth = 96
     Write-Host "  Verification Queue       built ($show rows shown)"
 
     # ------------------------------------------------- Subsystem Readiness
@@ -480,6 +490,7 @@ in
         @('Current (count)',           '=COUNTIF(tReq[IsCurrent],1)',                                      '=INDEX(tKPI[CurrentCount],1)'),
         @('Queue size',                '=COUNTA(tQueue[RequirementID])',                                   '=COUNTIF(tReq[IsCurrent],0)'),
         @('Rig hours outstanding',     '=SUM(tQueue[RigHours])',                                           '=INDEX(tKPI[RigHoursOutstanding],1)'),
+        @('Airframe hours outstanding','=SUM(tQueue[AirframeHours])',                                      '=INDEX(tKPI[AirframeHoursOutstanding],1)'),
         @('Critical RAID open',        '=COUNTIFS(tRAID[ExposureBand],"Critical",tRAID[IsOpen],1)',        '=INDEX(tKPI[CriticalRAIDOpen],1)'),
         @('Overdue RAID %',            '=COUNTIF(tRAID[IsOverdue],1)/COUNTIF(tRAID[IsOpen],1)*100',        '=INDEX(tKPI[OverdueRAIDPct],1)'),
         @('Must-ship, subsystem sum',  '=SUM(tSub[MustShip])',                                             '=COUNTIF(tReq[Priority],"MustShip")'),

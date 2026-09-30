@@ -126,7 +126,7 @@ function New-Rel($fromTable, $fromCol, $toTable, $toCol) {
 # 3. Tables
 #
 # Loaded from the SQL VIEWS, not the raw facts. The verification-currency model
-# is defined once in SQL and asserted by 23 acceptance tests; re-deriving
+# is defined once in SQL and asserted by 25 acceptance tests; re-deriving
 # staleness in DAX would create a second definition free to drift from the
 # first, and this project's whole argument depends on one definition of "ready".
 # -----------------------------------------------------------------------------
@@ -203,15 +203,15 @@ $model.Tables.Add($tReq) | Out-Null
 $tQueue = New-MTable "Queue" @"
 SELECT PriorityRank, RequirementID, SubsystemCode, ReqType, Priority, Criticality,
        OwnerID, OwnerName, OwnerTeam, MinTestLevel, LastGoodBuild, InterveningBuilds,
-       Cases, RigHours, TestMinutes, CumulativeRigHours, PriorityScore, ActionCode,
-       CAST(IsThisWeek AS BIT) AS IsThisWeek, RecommendedAction
+       Cases, RigHours, AirframeHours, TestMinutes, CumulativeRigHours, PriorityScore, ActionCode,
+       CAST(NeedsNewCase AS BIT) AS NeedsNewCase, CAST(IsThisWeek AS BIT) AS IsThisWeek, RecommendedAction
 FROM dbo.vw_VerificationQueue
 "@
 @("PriorityRank|Int64","RequirementID|String","SubsystemCode|String","ReqType|String","Priority|String",
   "Criticality|String","OwnerID|String","OwnerName|String","OwnerTeam|String","MinTestLevel|String",
-  "LastGoodBuild|Int64","InterveningBuilds|Int64","Cases|Int64","RigHours|Double","TestMinutes|Int64",
-  "CumulativeRigHours|Double","PriorityScore|Double","ActionCode|String","IsThisWeek|Boolean",
-  "RecommendedAction|String") |
+  "LastGoodBuild|Int64","InterveningBuilds|Int64","Cases|Int64","RigHours|Double","AirframeHours|Double",
+  "TestMinutes|Int64","CumulativeRigHours|Double","PriorityScore|Double","ActionCode|String",
+  "NeedsNewCase|Boolean","IsThisWeek|Boolean","RecommendedAction|String") |
   ForEach-Object { $p = $_ -split '\|'; $tQueue.Columns.Add((New-Col $p[0] $p[1])) | Out-Null }
 $model.Tables.Add($tQueue) | Out-Null
 
@@ -445,8 +445,13 @@ New-Measure $R "Under Levelled"  "CALCULATE ( COUNTROWS ( Requirement ), KEEPFIL
 # --- Queue and schedule ---------------------------------------------------
 New-Measure $Q "Outstanding"          "COUNTROWS ( Queue )" '#,0' "04 Queue"
 New-Measure $Q "Rig Hours Outstanding" "SUM ( Queue[RigHours] )" '#,0.0' "04 Queue"
-# The only figure here a programme board can act on without a further study.
+# Rig hours only: six rigs at 30 bookable hours. The only figure here a
+# programme board can act on without a further study.
 New-Measure $Q "Rig Weeks Outstanding" "DIVIDE ( [Rig Hours Outstanding], 180 )" '0.0' "04 Queue"
+# Field evidence needs the airframe, which rig capacity does not buy. Reported
+# beside the rig figure and never divided by it: the data holds no airframe
+# capacity, so there is no honest number of airframe-weeks to publish.
+New-Measure $Q "Airframe Hours Outstanding" "SUM ( Queue[AirframeHours] )" '#,0.0' "04 Queue"
 New-Measure $Q "Schedulable This Week" "CALCULATE ( COUNTROWS ( Queue ), KEEPFILTERS ( Queue[IsThisWeek] = TRUE () ) )" '#,0' "04 Queue"
 # The share of the WHOLE outstanding queue that fits this week, whatever a
 # slicer on IsThisWeek says: with the build guide's Page 3 slicer on True the

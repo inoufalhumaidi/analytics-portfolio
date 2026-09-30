@@ -96,8 +96,9 @@ SELECT PriorityRank, RequirementID, Title, ReqType, Priority,
        SubsystemCode, SubsystemName, Criticality,
        OwnerID, OwnerName, OwnerTeam,
        MinTestLevel, LastGoodBuild, InterveningBuilds,
-       Cases, RigHours, TestMinutes, CumulativeRigHours,
-       PriorityScore, ActionCode, CAST(IsThisWeek AS INT) AS IsThisWeek, RecommendedAction
+       Cases, RigHours, AirframeHours, TestMinutes, CumulativeRigHours,
+       PriorityScore, ActionCode, CAST(NeedsNewCase AS INT) AS NeedsNewCase,
+       CAST(IsThisWeek AS INT) AS IsThisWeek, RecommendedAction
 FROM dbo.vw_VerificationQueue
 ORDER BY PriorityRank;
 "@
@@ -107,7 +108,8 @@ SELECT SubsystemCode, SubsystemName, Criticality,
        CAST(RequiresHILRig AS INT) AS RequiresHILRig,
        Requirements, MustShip, CurrentAll, CurrentMustShip,
        NoEvidence, Insufficient, StaleByCode, StaleByReq,
-       ReadinessPct, BuildsChanged, LinesChanged, LastChangeBuild, RigHoursOutstanding
+       ReadinessPct, BuildsChanged, LinesChanged, LastChangeBuild,
+       RigHoursOutstanding, AirframeHoursOutstanding
 FROM dbo.vw_SubsystemReadiness
 ORDER BY ReadinessPct;
 "@
@@ -119,7 +121,7 @@ SELECT AsOfBuild, CONVERT(CHAR(10), AsOfDate, 23) AS AsOfDate,
        StaleVerificationPct, PolicyCompliancePct,
        NoEvidenceCount, InsufficientCount, StaleCount, CurrentCount,
        BlockedTestPct, CriticalRAIDOpen, OverdueRAIDPct, TotalRAIDExposure,
-       RigHoursOutstanding
+       RigHoursOutstanding, AirframeHoursOutstanding
 FROM dbo.vw_ReadinessKPI;
 "@
 
@@ -131,7 +133,12 @@ DECLARE @t TABLE (BuildNumber INT, BuildID VARCHAR(12), BuildDate DATE,
                   ShipReadinessPct DECIMAL(9,2), StaleVerificationPct DECIMAL(9,2),
                   ReadinessGapVsReported DECIMAL(9,2));
 INSERT INTO @t EXEC dbo.usp_ReadinessTrend @FromBuild = 40, @StepSize = 4;
-SELECT * FROM @t ORDER BY BuildNumber;
+-- ISO date like every other extract: SELECT * handed Export-Csv a DateTime,
+-- which it wrote in the machine's culture ("10/6/2025 12:00:00 AM")
+SELECT BuildNumber, BuildID, CONVERT(CHAR(10), BuildDate, 23) AS BuildDate,
+       WorkItemCompletionPct, VerificationCoveragePct, ShipReadinessPct,
+       StaleVerificationPct, ReadinessGapVsReported
+FROM @t ORDER BY BuildNumber;
 "@
 
 $total += Invoke-Extract -FileName 'raid_register.csv' -Description 'dbo.vw_RAIDExposure' -Sql @"

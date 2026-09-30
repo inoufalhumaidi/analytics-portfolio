@@ -89,9 +89,9 @@ strong{color:#0f1a26}
 <td style="text-align:right"><strong>41.90 points</strong></td>
 </tr>
 </tbody></table>
-<p><code>✦</code> <strong>Why the gap exists.</strong> A verification is evidence about <strong>one build</strong>. If a requirement passed on build 62 and its subsystem changed in build 71, the green tick in the requirements tool is describing software that no longer exists. Of the 519 baselined requirements, 96.53% have a passing test somewhere in their history — and a quarter of that evidence has been overtaken by change since it was captured.</p>
+<p><code>✦</code> <strong>Why the gap exists.</strong> A verification is evidence about <strong>one build</strong>. If a requirement passed on build 62 and its subsystem changed in build 71, the green tick in the requirements tool is describing software that no longer exists. Of the 519 baselined requirements, 96.53% have a passing test somewhere in their history — and a quarter of the evidence that meets policy has been overtaken by change since it was captured.</p>
 <p><strong>The gap is not spread evenly.</strong> Two safety-critical subsystems — Flight Control Interface and Payload Release Mechanism — carry <strong>109 of the 281 must-ship requirements</strong>, changed in 45 and 42 builds respectively, and sit at <strong>23.40%</strong> and <strong>32.26%</strong> ready. Everything else is between 59% and 83%.</p>
-<p><strong>The honest schedule answer:</strong> 226 requirements outstanding, <strong>610 hardware-rig hours</strong>, <strong>3.4 rig-weeks</strong> at current capacity. Forty of them can be booked in the first week.</p>
+<p><strong>The honest schedule answer:</strong> 226 requirements outstanding, <strong>425 hardware-rig hours</strong> — <strong>2.4 rig-weeks</strong> at current capacity — plus <strong>272 airframe hours</strong> (34 flights) that no rig can do. Sixty-nine of them can be booked in the first rig week.</p>
 <hr/>
 <h2>02 · The business question, and why the obvious metric cannot answer it</h2>
 <blockquote><p><strong>Is the new payload ready to ship, and what is still open?</strong></p></blockquote>
@@ -99,10 +99,7 @@ strong{color:#0f1a26}
 <p>Three things have to be true of a requirement before it can ship:</p>
 <ul>
 <li><strong>Evidence exists.</strong> Somebody ran a test and it passed.</li>
-<li><strong>The evidence counts.</strong> It was produced at the grade the requirement's type demands, by</li>
-</ul>
-<p>somebody entitled to produce it.</p>
-<ul>
+<li><strong>The evidence counts.</strong> It was produced at the grade the requirement's type demands, by somebody entitled to produce it.</li>
 <li><strong>The evidence still applies.</strong> Nothing it depended on has moved since.</li>
 </ul>
 <p>Work-item completion tests none of these. It tests whether the task was ticked.</p>
@@ -117,7 +114,7 @@ strong{color:#0f1a26}
 <p><code>✦</code> <strong>What is deliberately not a staleness rule: age.</strong> A verification from fourteen months ago is perfectly good if nothing underneath it has moved, and one from last Tuesday is worthless if the subsystem was rewritten on Wednesday. Elapsed time is the proxy people reach for because it is easy to compute. Intervening change is the actual question, and it is why the model needs build history rather than timestamps.</p>
 <p><strong>And <em>clarified</em> is not <em>modified</em>.</strong> Rewording a requirement for a certification reviewer does not change the behaviour under test. Treating it as invalidated evidence would inflate the finding and cost it credibility on the part that is real. The model records the distinction and only one of them invalidates.</p>
 <h3>Validation</h3>
-<p>Every headline figure is implemented twice — once in T-SQL, once in Excel formulas — and reconciled on the workbook's own Validation sheet: <strong>16 of 16 agree</strong>. The Power BI model is queried in DAX and reconciled against SQL on <strong>29 figures</strong>, including the state partition, and readiness and the stale split for all eight subsystems individually. The acceptance suite is <strong>23 of 23</strong>, and the generator is deterministic, so every figure here is reproducible by a reader who runs the scripts.</p>
+<p>Every headline figure is implemented twice — once in T-SQL, once in Excel formulas — and reconciled on the workbook's own Validation sheet: <strong>17 of 17 agree</strong>. The Power BI model is queried in DAX and reconciled against SQL on <strong>30 figures</strong>, including the state partition, and readiness and the stale split for all eight subsystems individually. The acceptance suite is <strong>25 of 25</strong>, and the generator is deterministic, so every figure here is reproducible by a reader who runs the scripts.</p>
 <p>Agreement between tools is necessary, not sufficient — two implementations derived from the same flawed definition will agree with each other and both be wrong. That caveat is stated in the validation report, the workbook and the Power BI validator, because it is the one that is easiest to forget while looking at a column of green.</p>
 <hr/>
 <h2>04 · Finding 1 — Most of the evidence is real. A quarter of it no longer applies.</h2>
@@ -160,14 +157,10 @@ strong{color:#0f1a26}
 <p>Only <strong>18 requirements</strong> — 3.5% — have never been tested. That is what makes the headline coverage figure look healthy, and it is genuinely good news.</p>
 <p>The problem is the 208 requirements that <em>have</em> been tested and still cannot be shipped on:</p>
 <ul>
-<li><strong>95 have evidence that has been overtaken</strong> by a change to the same subsystem, or by a change to</li>
+<li><strong>95 have evidence that has been overtaken</strong> by a change to the same subsystem, or by a change to the requirement itself. 24.48% of all policy-compliant evidence.</li>
+<li><strong>113 have evidence that never counted</strong> — produced below the grade the requirement's type demands, or by the requirement's own author.</li>
 </ul>
-<p>the requirement itself. 24.48% of all policy-compliant evidence.</p>
-<ul>
-<li><strong>113 have evidence that never counted</strong> — produced below the grade the requirement's type</li>
-</ul>
-<p>demands, or by the requirement's own author.</p>
-<blockquote><p><strong>A requirement that has been tested and a requirement that is verified are not the same population, and the difference is 40% of the must-ship set.</strong></p></blockquote>
+<blockquote><p><strong>A requirement that has been tested and a requirement that is verified are not the same population, and the difference is 45% of the must-ship set (127 of 281).</strong></p></blockquote>
 <hr/>
 <h2>05 · Finding 2 — The gap sits exactly where the design is still moving</h2>
 <table><thead><tr>
@@ -282,13 +275,9 @@ strong{color:#0f1a26}
 </tbody></table>
 <p>Against that policy:</p>
 <ul>
-<li><strong>110 requirements</strong> pass only at a level below what their type demands — a safety behaviour</li>
+<li><strong>110 requirements</strong> have passing evidence below the level their type demands, and none that meets it — a safety behaviour signed off by a unit test.</li>
+<li><strong>20 requirements</strong> (19 of them must-ship) have a pass by their own owner and no admissible evidence, against a policy requiring an independent witness. The two groups overlap by 17, so together they are the 113. (46 requirements carry at least one self-run pass; the other 26 also hold evidence that counts.)</li>
 </ul>
-<p>signed off by a unit test.</p>
-<ul>
-<li><strong>46 requirements</strong> (40 of them must-ship) have passing evidence produced by their own owner, against a policy requiring</li>
-</ul>
-<p>an independent witness.</p>
 <p>Both look like a pass on every dashboard the programme currently runs. Neither is admissible evidence, and for the Regulatory subset neither would be accepted by the certifying authority.</p>
 <blockquote><p><strong>Policy compliance: 77.45%</strong> of requirements with evidence have evidence that actually counts.</p></blockquote>
 <hr/>
@@ -302,22 +291,22 @@ strong{color:#0f1a26}
 </tr></thead><tbody>
 <tr>
 <td style="text-align:left">Unit</td>
-<td style="text-align:right">~90%</td>
+<td style="text-align:right">~75%</td>
 <td style="text-align:left">Automated, effectively free</td>
 </tr>
 <tr>
 <td style="text-align:left">Integration</td>
-<td style="text-align:right">~88%</td>
+<td style="text-align:right">~74%</td>
 <td style="text-align:left">Automated, cheap</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>Hardware-in-the-loop</strong></td>
-<td style="text-align:right"><strong>~74%</strong></td>
+<td style="text-align:right"><strong>~56%</strong></td>
 <td style="text-align:left">Six rigs, bookable hours</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>Field (airframe)</strong></td>
-<td style="text-align:right"><strong>~54%</strong></td>
+<td style="text-align:right"><strong>~37%</strong></td>
 <td style="text-align:left">One airframe, weather, crew</td>
 </tr>
 </tbody></table>
@@ -326,7 +315,8 @@ strong{color:#0f1a26}
 <hr/>
 <h2>08 · The verification queue as an operational control</h2>
 <p>226 outstanding requirements is not a plan. A programme can book perhaps 180 rig hours in a week — six rigs at thirty bookable hours — so the queue stays complete for audit and marks what is actually schedulable.</p>
-<p><strong>40 requirements in the first week. 610 rig hours, or 3.4 rig-weeks, to clear the backlog.</strong></p>
+<p><strong>69 requirements in the first rig week. 425 rig hours, or 2.4 rig-weeks, to clear the rig backlog — and 272 airframe hours, 34 flights, that no rig can do.</strong></p>
+<p>Each item is costed by what its action needs, not by the tests it happens to have: every test at or above the level its policy demands, one new test where none exists yet at that level (91 items need one written first; pricing each at a single run is a floor), and nothing for a signature. Field evidence needs the airframe — one aircraft, weather and a crew — so its hours are reported beside the rig figure and never divided by rig capacity, and no item that needs a flight is booked into the rig week. The data holds no airframe capacity, so those 272 hours are costed, not scheduled; with one aircraft they are the likelier constraint.</p>
 <table><thead><tr>
 <th style="text-align:left">Action</th>
 <th style="text-align:left">What it means</th>
@@ -340,7 +330,7 @@ strong{color:#0f1a26}
 <tr>
 <td style="text-align:left"><code>RAISE_TEST_LEVEL</code></td>
 <td style="text-align:left">Passing evidence sits below the required grade</td>
-<td style="text-align:left">Test engineer, needs a rig slot</td>
+<td style="text-align:left">Test engineer: a rig slot or a flight, often a new test first</td>
 </tr>
 <tr>
 <td style="text-align:left"><code>REVIEW_THEN_RERUN</code></td>
@@ -350,7 +340,7 @@ strong{color:#0f1a26}
 <tr>
 <td style="text-align:left"><code>INDEPENDENT_WITNESS</code></td>
 <td style="text-align:left">Verified by its own author</td>
-<td style="text-align:left">A second engineer; no re-execution needed</td>
+<td style="text-align:left">A second engineer's signature; a witnessed re-run if the evidence has since been overtaken</td>
 </tr>
 <tr>
 <td style="text-align:left"><code>VERIFY</code></td>
@@ -358,7 +348,7 @@ strong{color:#0f1a26}
 <td style="text-align:left">Write the test, then run it</td>
 </tr>
 </tbody></table>
-<p><strong>The action follows the state, not the rank.</strong> Sending a team to re-run a test when the <em>requirement</em> changed risks certifying against the old wording — so that case goes to a systems engineer before it goes near a rig. And <code>INDEPENDENT_WITNESS</code> costs a signature, not rig time, which is why it is worth separating from the rest rather than lumping everything into "not done".</p>
+<p><strong>The action follows the state, not the rank.</strong> Sending a team to re-run a test when the <em>requirement</em> changed risks certifying against the old wording — so that case goes to a systems engineer before it goes near a rig. And <code>INDEPENDENT_WITNESS</code> costs a signature, not rig time, when nothing has changed since the pass — two of the three here. The third passed on build 57, and its subsystem has changed 22 times since, so it is re-run under a witness: a signature now would certify superseded evidence. That is why it is worth separating from the rest rather than lumping everything into "not done".</p>
 <p>Ranking is by a four-term priority score — must-ship weight, criticality, how badly the evidence fails, and how much has changed since — with each term visible in the extract so a reviewer can see which one is driving any given rank rather than trusting one opaque number.</p>
 <hr/>
 <h2>09 · Data quality</h2>
@@ -389,38 +379,38 @@ strong{color:#0f1a26}
 </tr>
 <tr>
 <td style="text-align:left"><strong>3</strong></td>
-<td style="text-align:left"><strong>Treat rig capacity as the schedule driver, not test throughput.</strong></td>
+<td style="text-align:left"><strong>Treat rig and airframe time as the schedule driver, not test throughput.</strong></td>
 <td style="text-align:left">Programme board</td>
-<td style="text-align:left">610 rig hours outstanding against 180 a week. Adding a seventh rig moves the date; adding test engineers does not.</td>
+<td style="text-align:left">425 rig hours outstanding against 180 a week, plus 272 airframe hours on one aircraft. A seventh rig shortens the rig work but not the flights; more test engineers shorten neither.</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>4</strong></td>
-<td style="text-align:left"><strong>Re-witness the 3 self-verified requirements that a signature alone would fix.</strong></td>
+<td style="text-align:left"><strong>Countersign the 2 self-verified requirements a signature alone would fix; re-run the third under a witness.</strong></td>
 <td style="text-align:left">Quality</td>
-<td style="text-align:left">Costs a second signature, not rig time. It is the cheapest readiness the programme can buy, and for Regulatory items it is not optional.</td>
+<td style="text-align:left">REQ-0124 and REQ-0002 cost a second signature, not rig time: the cheapest readiness the programme can buy, and for these Safety items it is not optional. REQ-0488 passed on build 57 and its subsystem has changed 22 times since, so it needs a witnessed re-run.</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>5</strong></td>
 <td style="text-align:left"><strong>Schedule the 110 under-levelled requirements explicitly.</strong></td>
 <td style="text-align:left">Test manager</td>
-<td style="text-align:left">They are currently invisible: they read as passes. Each needs a rig slot it has never been allocated.</td>
+<td style="text-align:left">They are currently invisible: they read as passes. 62 need a rig slot and 12 a flight they have never been allocated, and 91 need a test written first at the level their type demands.</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>6</strong></td>
 <td style="text-align:left"><strong>Report readiness and completion side by side from now on.</strong></td>
 <td style="text-align:left">Programme board</td>
-<td style="text-align:left">Not as a criticism of the existing metric. Reporting only completion is what let a 42-point gap stay invisible for two quarters.</td>
+<td style="text-align:left">Not as a criticism of the existing metric. Reporting only completion is what let a gap of at least 42 points stay invisible for most of a year.</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>7</strong></td>
 <td style="text-align:left"><strong>Re-baseline the seven RAID items due before they were raised.</strong></td>
 <td style="text-align:left">PMO</td>
-<td style="text-align:left">Trivial to fix, and they are quietly inflating the overdue rate that the board uses to judge the rest of the register.</td>
+<td style="text-align:left">Trivial to fix. They are excluded from the overdue count, but three are still open and counted as open, so they dilute the overdue rate the board uses (57.78%; 61.90% without them), and none of them can ever be reported overdue until re-baselined.</td>
 </tr>
 </tbody></table>
 <hr/>
 <h2>11 · What this analysis does not tell you</h2>
-<p><strong>It does not forecast a date.</strong> 3.4 rig-weeks is a capacity statement. There is no critical path, no labour model and no cost, so "when will it be ready" is not answerable from this work.</p>
+<p><strong>It does not forecast a date.</strong> 2.4 rig-weeks is a capacity statement, and the 272 airframe hours have no capacity to divide by. There is no critical path, no labour model and no cost, so "when will it be ready" is not answerable from this work.</p>
 <p><strong>Staleness is binary.</strong> A subsystem that changed once and one that changed eleven times both invalidate. The queue ranks by how much changed, but readiness itself does not award partial credit — deliberately, because a fractional ship gate is not a ship decision.</p>
 <p><strong>Test levels are assumed to be a ladder.</strong> <code>Unit &lt; Integration &lt; HIL &lt; Field</code> assumes field evidence subsumes rig evidence. On a real programme some instrumented rig data cannot be replaced by a flight, and the policy table cannot currently express that.</p>
 <p><strong>One release candidate.</strong> The model is parameterised by build and the trend walks it backwards, so "would build 74 have been a better ship point" is answerable — it is simply not answered here.</p>

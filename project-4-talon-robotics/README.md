@@ -51,7 +51,7 @@ project-4-talon-robotics/
 │   ├── 04_data_quality_checks.sql    11 behavioural checks + a gate that raises
 │   ├── 05_kpi_views.sql              readiness scorecard, RAID exposure, verification queue
 │   ├── 06_stored_procedures.sql      the reusable interface — 6 procedures, all @AsOf-aware (plus the data-quality gate from 04)
-│   └── 07_uat_test_cases.sql         23 acceptance tests; raises and stops on failure
+│   └── 07_uat_test_cases.sql         25 acceptance tests; raises and stops on failure
 ├── erp_extracts/                     12 CSVs (2,199 rows) + the scripts that write and check them
 ├── excel/
 │   ├── Build_Workbook.ps1            builds the control from the extracts
@@ -59,7 +59,7 @@ project-4-talon-robotics/
 │   └── Talon_Readiness_Control.xlsx  the operational control
 ├── powerbi/
 │   ├── Build_PowerBI_Model.ps1       scripts the model into a live Desktop session (AMO/TOM)
-│   ├── Validate_PowerBI_Model.ps1    queries the model in DAX and reconciles 29 figures
+│   ├── Validate_PowerBI_Model.ps1    queries the model in DAX and reconciles 30 figures
 │   ├── DAX_Measures.md               the semantic model and every measure, with the reasoning
 │   └── POWER_BI_BUILD_GUIDE.md       how to rebuild it, and the report pages to draw by hand
 ├── docs/
@@ -105,10 +105,10 @@ resource:
 
 | Test level | Made the RC regression | Why |
 |---|---:|---|
-| Unit | ~90% | Automated, effectively free |
-| Integration | ~88% | Automated, cheap |
-| **Hardware-in-the-loop** | **~74%** | Six rigs, bookable hours |
-| **Field (airframe)** | **~54%** | One airframe, weather, crew |
+| Unit | ~75% | Automated, effectively free |
+| Integration | ~74% | Automated, cheap |
+| **Hardware-in-the-loop** | **~56%** | Six rigs, bookable hours |
+| **Field (airframe)** | **~37%** | One airframe, weather, crew |
 
 So stale evidence lands hardest on exactly the Safety and Regulatory requirements whose policy
 *demands* hardware evidence. "Verification is behind" and "we cannot get rig time" are one item on
@@ -123,10 +123,10 @@ not write more tests.
 contestable input in the analysis, so it lives in a table a systems engineer can argue with rather
 than inside a query nobody reads.
 
-- **110 requirements** pass only below the level their type demands — a safety behaviour signed off
-  by a unit test.
-- **46 requirements** (40 of them must-ship) have passing evidence produced by their own owner, against a policy requiring
-  an independent witness.
+- **110 requirements** have passing evidence below the level their type demands, and none that meets
+  it — a safety behaviour signed off by a unit test.
+- **20 requirements** (19 of them must-ship) have a pass by their own owner and no admissible
+  evidence, against a policy requiring an independent witness. The two overlap by 17: together, 113.
 
 Both read as a pass on every dashboard the programme currently runs. **Policy compliance: 77.45%.**
 
@@ -137,11 +137,16 @@ Both read as a pass on every dashboard the programme currently runs. **Policy co
 226 outstanding requirements is not a plan. A programme can book about 180 rig hours a week, so the
 queue stays complete for audit and marks what is actually schedulable.
 
-**40 requirements in the first week. 610 rig hours — 3.4 rig-weeks — to clear the backlog.**
+**69 requirements in the first rig week. 425 rig hours — 2.4 rig-weeks — to clear the rig backlog,
+plus 272 airframe hours (34 flights) that no rig can do.** Each item is costed by what its action
+needs: its tests at the level its policy demands, a new test where none exists, nothing for a
+signature. Flights are never divided by rig capacity; the data holds no airframe capacity, so they
+are costed, not scheduled.
 
 **The action follows the state, not the rank.** Sending a team to re-run a test when the
 *requirement* changed risks certifying against the old wording, so that case goes to a systems
-engineer first. `INDEPENDENT_WITNESS` costs a signature rather than rig time, which is why it is
+engineer first. `INDEPENDENT_WITNESS` costs a signature rather than rig time when nothing has
+changed since the pass (two of the three; the third is re-run under a witness), which is why it is
 worth separating instead of lumping everything into "not done".
 
 ---
@@ -168,7 +173,7 @@ LibreOffice.
 
 `powerbi/Build_PowerBI_Model.ps1` scripts 12 tables, 9 relationships and **53 DAX measures** into a
 running Desktop session through the local Analysis Services engine. `Validate_PowerBI_Model.ps1`
-then queries the model **in DAX** and reconciles **29 of 29** figures against SQL.
+then queries the model **in DAX** and reconciles **30 of 30** figures against SQL.
 
 Four of those checks go past the totals on purpose: the five verification states must partition the
 population, the two stale buckets must be mutually exclusive, each subsystem's stale items must split
@@ -227,16 +232,16 @@ sqlcmd -S <server> -E -d TalonDelivery -i sql/04_data_quality_checks.sql
 sqlcmd -S <server> -E -d TalonDelivery -Q "EXEC dbo.usp_RunDataQualityChecks"   # the gate
 sqlcmd -S <server> -E -d TalonDelivery -i sql/05_kpi_views.sql
 sqlcmd -S <server> -E -d TalonDelivery -i sql/06_stored_procedures.sql
-sqlcmd -S <server> -E -d TalonDelivery -i sql/07_uat_test_cases.sql     # expect 23/23
+sqlcmd -S <server> -E -d TalonDelivery -i sql/07_uat_test_cases.sql     # expect 25/25
 
 powershell erp_extracts/Validate_Extracts.ps1                           # expect 12/12: the committed CSVs are what SQL produces
 powershell erp_extracts/Export_Extracts.ps1
 powershell excel/Build_Workbook.ps1
-powershell excel/Validate_Workbook.ps1                                  # expect 16/16
+powershell excel/Validate_Workbook.ps1                                  # expect 17/17
 
 # Power BI: open Desktop on a blank report first, then
 powershell powerbi/Build_PowerBI_Model.ps1                              # click the credential prompt
-powershell powerbi/Validate_PowerBI_Model.ps1                           # expect 29/29
+powershell powerbi/Validate_PowerBI_Model.ps1                           # expect 30/30
 ```
 
 **The gate is a separate step.** `04_data_quality_checks.sql` *creates* `usp_RunDataQualityChecks`; it does not run it. Executing the procedure is what applies the tolerance — it passes here at **1.779% against 2.000%**.
@@ -258,12 +263,13 @@ ships with its data loaded.
 |---|---:|---:|:--:|
 | **Ship readiness** | **51.96%** | 100.00 | **Red** |
 | Verification coverage | 96.53% | 95.00 | Green |
-| **Stale verification** | **24.48%** | 15.00 | **Red** |
+| **Stale verification** | **24.48%** | 15.00 | Amber |
 | Policy compliance | 77.45% | 100.00 | **Red** |
 | Work-item completion | 93.86% | 95.00 | Amber |
 | **Critical RAID open** | **9** | 0 | **Red** |
 | Overdue RAID | 57.78% | 10.00 | **Red** |
-| Rig-hours outstanding | 610.0 | — | 3.4 rig-weeks |
+| Rig-hours outstanding | 425.0 | — | 2.4 rig-weeks |
+| Airframe hours outstanding | 272.0 | — | 34 flights; no capacity to divide by |
 
 Verification coverage is the only green figure on the board, and it is the one that measures
 whether a test was ever run rather than whether its result still applies.

@@ -160,6 +160,25 @@ try {
         $failures++
         Write-Host ("  Queue size disagrees: excel {0} vs sql {1}" -f $qOutstanding, $sqlOutstanding) -ForegroundColor Red
     }
+    # Excel re-derives the week itself (Calc sheet); SQL publishes IsThisWeek.
+    # Two implementations of one rule, so they must agree at the published
+    # capacity -- including leaving out work that needs the airframe. Without
+    # this, Excel could keep counting flights against the rigs unnoticed.
+    $sqlThisWeek = Get-SqlScalar "SELECT COUNT(*) FROM dbo.vw_VerificationQueue WHERE IsThisWeek = 1"
+    if ([math]::Abs($qThisWeek - $sqlThisWeek) -gt 0.5) {
+        $failures++
+        Write-Host ("  Schedulable this week disagrees: excel {0} vs sql {1}" -f $qThisWeek, $sqlThisWeek) -ForegroundColor Red
+    } else {
+        Write-Host ("  Schedulable this week: excel {0} = sql {1}" -f $qThisWeek, $sqlThisWeek) -ForegroundColor Green
+    }
+    $qAirframe   = $wb.Names.Item('AirframeHoursOutstanding').RefersToRange.Value2
+    $sqlAirframe = Get-SqlScalar "SELECT AirframeHoursOutstanding FROM dbo.vw_ReadinessKPI"
+    if ([math]::Abs($qAirframe - $sqlAirframe) -gt 0.005) {
+        $failures++
+        Write-Host ("  Airframe hours disagree: excel {0} vs sql {1}" -f $qAirframe, $sqlAirframe) -ForegroundColor Red
+    } else {
+        Write-Host ("  Airframe hours: excel {0:N1} = sql {1:N1} (beside the rig figure, never divided by it)" -f $qAirframe, $sqlAirframe) -ForegroundColor Green
+    }
 
     # ---- sweep every used cell for error values ---------------------------
     Write-Host ""

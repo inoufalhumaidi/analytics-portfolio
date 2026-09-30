@@ -397,11 +397,11 @@ GO
 
 INSERT INTO dbo.Ref_ReadinessTargets (MetricName, TargetValue, WarningValue, Direction, Unit, [Description]) VALUES
  ('ShipReadinessPct',        100.00, 95.00, 'HigherBetter', 'Percent',
-  'MustShip requirements whose latest passing verification is still CURRENT and meets policy. The ship gate; 100% is the only passing value, because a must-ship requirement is by definition one you cannot ship without.'),
+  'MustShip requirements whose latest policy-compliant passing verification is still CURRENT. The ship gate; 100% is the only passing value, because a must-ship requirement is by definition one you cannot ship without.'),
  ('VerificationCoveragePct',  95.00, 85.00, 'HigherBetter', 'Percent',
   'Baselined requirements with any passing verification on any build. Says evidence exists; says nothing about whether it still applies.'),
  ('StaleVerificationPct',     15.00, 30.00, 'LowerBetter',  'Percent',
-  'Of requirements that have evidence, the share whose latest passing run predates a change to the same subsystem or a Modified change to the requirement itself. The gap between coverage and readiness.'),
+  'Of requirements whose evidence meets policy, the share whose latest policy-compliant pass predates a change to the same subsystem or a Modified change to the requirement itself. The gap between coverage and readiness.'),
  ('WorkItemCompletionPct',    95.00, 85.00, 'HigherBetter', 'Percent',
   'Closed work items over all work items. Reported because the programme reports it; it counts effort, not evidence.'),
  ('PolicyCompliancePct',      100.00, 95.00,'HigherBetter', 'Percent',
@@ -409,7 +409,7 @@ INSERT INTO dbo.Ref_ReadinessTargets (MetricName, TargetValue, WarningValue, Dir
  ('CriticalRAIDOpen',          0.00,  2.00, 'LowerBetter',  'Count',
   'Open or mitigating RAID items in the Critical exposure band.'),
  ('OverdueRAIDPct',           10.00, 25.00, 'LowerBetter',  'Percent',
-  'Open RAID items past their due date, as a share of all open items.'),
+  'Open RAID items past their due date, as a share of all open items, excluding items due before they were raised (a data defect).'),
  ('BlockedTestPct',            5.00, 12.00, 'LowerBetter',  'Percent',
   'Test cases whose most recent run against the release candidate was Blocked rather than Pass or Fail.');
 GO

@@ -104,13 +104,13 @@ FROM (VALUES
  ('WORKITEM_CLOSED_BEFORE_OPEN','WorkItem','High',  'Timing',    CAST(0 AS BIT),
   'A work item closed before it was opened. Corrupts cycle-time and burn-down figures; does not touch verification evidence.'),
  ('RAID_DUE_BEFORE_RAISED','RAID',        'Medium', 'Timing',    CAST(0 AS BIT),
-  'A RAID item due before it was raised. Makes the item permanently overdue on the day it is created, which quietly inflates the overdue rate.'),
+  'A RAID item due before it was raised: overdue on the day it is created. IsOverdue excludes it, so it cannot inflate the overdue rate; while open it still sits in the rate''s denominator, and it can never be reported overdue until its dates are corrected.'),
  ('ORPHAN_DIMENSION_KEY',  'TestRun',     'High',   'Integrity', CAST(1 AS BIT),
   'A fact row pointing at a requirement, build, person or date that does not exist. Enforced structurally by foreign keys; checked anyway, because a check that never fires is how you find out the constraint was dropped.'),
  ('SELF_VERIFIED_SAFETY',  'Requirement', 'High',   'Policy',    CAST(0 AS BIT),
-  'A Safety or Regulatory requirement whose only passing evidence was produced by its own owner, against a policy that requires an independent tester. The record is accurate; the practice is not. Held to account by the KPI layer, not by the data-quality gate.'),
+  'A Safety or Regulatory requirement with a passing run by its own owner and no evidence that meets its policy, which requires an independent tester. The record is accurate; the practice is not. Held to account by the KPI layer, not by the data-quality gate.'),
  ('UNDER_LEVELLED_VERIFICATION','Requirement','High','Policy',   CAST(0 AS BIT),
-  'A requirement whose only passing evidence sits below the test level its type demands -- a safety behaviour signed off by a unit test. Again accurate data recording an inadequate practice.'),
+  'A requirement with a passing run below the test level its type demands and no evidence that meets its policy -- a safety behaviour signed off by a unit test. Again accurate data recording an inadequate practice.'),
  ('BLOCKED_AT_RELEASE_CANDIDATE','TestCase','Medium','Evidence', CAST(0 AS BIT),
   'A test case whose most recent run against the release candidate was Blocked. A blocked test is not evidence of anything, and a readiness metric that treats "could not run" as "did not fail" is how rig contention stays invisible until the ship date.')
 ) AS c(AnomalyType, EntityType, Severity, ImpactClass, CountsTowardExposure, WhatItMeans);
@@ -223,7 +223,7 @@ AS RETURN
     UNION ALL
     SELECT 'SELF_VERIFIED_SAFETY', 'Requirement', v.RequirementID,
            CONCAT(v.ReqType, ' requirement on ', v.SubsystemCode,
-                  ' whose passing evidence came from its own owner; policy requires an independent tester.')
+                  ' with a pass by its own owner and no evidence meeting policy, which requires an independent tester.')
     FROM dbo.fn_RequirementVerification(@AsOfBuild) v
     WHERE v.RequiresIndependentTester = 1
       AND v.PassingButSelfVerified > 0
@@ -232,7 +232,7 @@ AS RETURN
     UNION ALL
     SELECT 'UNDER_LEVELLED_VERIFICATION', 'Requirement', v.RequirementID,
            CONCAT(v.ReqType, ' requirement requiring ', v.MinTestLevel,
-                  ' evidence, passing only at a lower test level.')
+                  ' evidence, with a pass below that level and none that meets policy.')
     FROM dbo.fn_RequirementVerification(@AsOfBuild) v
     WHERE v.PassingButUnderLevelled > 0 AND v.MeetsPolicy = 0
 

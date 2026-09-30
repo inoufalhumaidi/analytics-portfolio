@@ -123,7 +123,7 @@ All active, all single-direction. `Dim_Subsystem` feeds three facts, which is an
 the ambiguity trap would be a relationship *between* two facts, and there is none.
 
 **Why the facts load from views.** The verification-currency model is defined once in SQL and
-asserted by 23 acceptance tests. Re-deriving staleness in DAX would create a second definition free
+asserted by 25 acceptance tests. Re-deriving staleness in DAX would create a second definition free
 to drift from the first, and this project's entire argument depends on there being exactly one
 definition of "ready". DAX does aggregation, ratios, time intelligence and conditional formatting —
 what a semantic model is actually for.
@@ -282,6 +282,11 @@ DIVIDE ( [Rig Hours Outstanding], 180 )
 ```
 
 ```dax
+Airframe Hours Outstanding =
+SUM ( Queue[AirframeHours] )
+```
+
+```dax
 Schedulable This Week =
 CALCULATE ( COUNTROWS ( Queue ), KEEPFILTERS ( Queue[IsThisWeek] = TRUE () ) )
 ```
@@ -295,8 +300,18 @@ DIVIDE (
 ```
 
 `Rig Weeks Outstanding` is the only figure in the model a programme board can act on without a
-further study. "We are behind" is not a decision; "we are 3.4 rig-weeks behind and the gate is in
+further study. "We are behind" is not a decision; "we are 2.4 rig-weeks behind and the gate is in
 two" is.
+
+**Each item is costed by what its action needs, in two resources that are never added.** SQL's
+`fn_VerificationCost` charges the tests whose pass could make the requirement current: every test
+at or above the policy level, one new test where none exists yet, nothing for a self-verified pass
+that only needs a countersignature. Hardware-in-the-loop hours go to `Queue[RigHours]` (425.0) and
+Field hours to `Queue[AirframeHours]` (272.0, thirty-four eight-hour flights). The old model summed
+every existing test of an item into one figure, 610.0, and divided it by rig capacity: that charged
+signatures as rig time, made items with no test at their level look free, and counted flights
+against the rigs. `[Airframe Hours Outstanding]` is never divided by 180, and there is no
+airframe-weeks measure, because the data holds no airframe capacity to divide by.
 
 The 180 is the one hardcoded parameter in the DAX, and it is a deliberate exception: six rigs at 30
 bookable hours, a fact about the building rather than a threshold anyone will argue about in a

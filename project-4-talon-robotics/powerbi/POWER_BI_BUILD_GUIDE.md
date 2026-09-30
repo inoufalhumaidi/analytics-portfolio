@@ -24,7 +24,7 @@ open — the same mechanism Tabular Editor and DAX Studio use. There is no CLI f
 
 ## 1. Build the model
 
-1. Run the SQL in order (`sql/01` … `sql/07`); expect **23/23** on the UAT suite.
+1. Run the SQL in order (`sql/01` … `sql/07`); expect **25/25** on the UAT suite.
 2. Open **Power BI Desktop** on a blank report and leave it open.
 3. `powershell powerbi/Build_PowerBI_Model.ps1`
 
@@ -43,7 +43,7 @@ happens once per Desktop session, and again after the tables are dropped and rec
 powershell powerbi/Validate_PowerBI_Model.ps1
 ```
 
-Expect **29 of 29 checks reconcile**.
+Expect **30 of 30 checks reconcile**.
 
 Do not skip this and do not substitute a glance at the field list. `Build_PowerBI_Model.ps1` reports
 complete success against a model that loaded zero rows — creating tables and measures never touches
@@ -94,7 +94,7 @@ experimental build the moment one appeared after the release candidate.
 | `01 Population` | Requirements, must-ship, should-ship |
 | `02 The contrast` | Work-item completion, ship readiness, the gap |
 | `03 Verification` | Coverage, policy compliance, the five states, staleness |
-| `04 Queue` | Outstanding, rig hours, rig weeks, schedulable this week |
+| `04 Queue` | Outstanding, rig hours, rig weeks, airframe hours, schedulable this week |
 | `05 Churn` | Builds changed, lines changed, churn per readiness point |
 | `06 RAID` | Open, overdue, critical, exposure |
 | `07 Status` | RAG colour and status pairs |
@@ -155,7 +155,7 @@ not behind on testing, it is still being designed.
   interactions** so it filters the table and the ActionCode bar but **none of the four cards**, which
   describe the whole queue. Connected, `Outstanding` and `Rig Weeks Outstanding` would show only the
   selected slice, and with the slicer on False `Schedulable This Week` would go blank beside a
-  `Week Coverage %` still reading 17.7%, since that measure ignores the slicer by design.
+  `Week Coverage %` still reading 30.5%, since that measure ignores the slicer by design.
 - Bar of `Outstanding` by `Queue[ActionCode]`, so the mix of *re-run* versus *raise the test level*
   versus *verify for the first time* is visible. Those need different people.
 
