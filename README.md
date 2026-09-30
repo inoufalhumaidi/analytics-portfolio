@@ -20,7 +20,7 @@ Every project follows the same standard:
 |---|---|---|---|---|
 | 1 | [Ridgeline Field Services: Operational Efficiency](project-1-ridgeline-field-services/) | Where is technician capacity being wasted, and which dispatch decisions should change this week? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
 | 2 | [Vantage Wholesale Supply: Receivables Performance](project-2-vantage-receivables/) | Of the days DSO has risen, how many did we grant through longer terms, how many are customers taking, and how many are our own unapplied cash — and who should collections call first? | Excel · Power Query · SQL · Streamlit | ✅ Complete |
-| 3 | [Lumen Optics Manufacturing: Photonics Spend Scorecard](project-3-lumen-optics-spend/) | Our prices are flat and every variance report is green — so why is material cost per accepted unit rising, and where should sourcing renegotiate first? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
+| 3 | [Lumen Optics Manufacturing: Photonics Spend Scorecard](project-3-lumen-optics-spend/) | Our prices are flat and every variance report is green — so why is material cost per accepted unit rising, and where should sourcing renegotiate first? | SQL Server · Power BI · DAX · Excel · Streamlit | ✅ Complete |
 | 4 | [Talon Robotics: Payload Deployment Delivery](project-4-talon-robotics/) | Is the new payload ready to ship, and what is still open? | SQL Server · Power BI · DAX · Excel · Streamlit | ✅ Complete |
 | 5 | [Meridian UAV Services: Predictive Maintenance](project-5-meridian-uav/) | If we are 99.73% compliant, why do we keep having failures? | Python · SQL Server · Streamlit · Excel | ✅ Complete |
 
@@ -67,7 +67,8 @@ each vendor against itself. On an index where 100 means "best available", that r
 
 Three defects in the validation report are worth reading: a planted pattern that silently never existed because an `UPDATE` matched zero rows; a contract-lapse rule that produced the opposite of a lapse, caught only because a figure refused to move when its driver doubled; and a window function inside a `CROSS APPLY` that saw a single row and reported "100% of vendor-part pairs holding price flat" directly beneath a table showing prices falling. See [`docs/data_validation_report.md`](project-3-lumen-optics-spend/docs/data_validation_report.md).
 
-Start with the project [README](project-3-lumen-optics-spend/README.md) for the reproduction steps.
+**Try it live: [analytics-portfolio-lumen-optics-spend.streamlit.app](https://analytics-portfolio-lumen-optics-spend.streamlit.app/)**, the
+Streamlit app, with nothing to install. Or start with the project [README](project-3-lumen-optics-spend/README.md) for the reproduction steps.
 
 ## Project 4 at a glance
 
