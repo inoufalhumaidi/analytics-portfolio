@@ -19,7 +19,7 @@ Every project follows the same standard:
 | # | Project | Business question | Stack | Status |
 |---|---|---|---|---|
 | 1 | [Ridgeline Field Services: Operational Efficiency](project-1-ridgeline-field-services/) | Where is technician capacity being wasted, and which dispatch decisions should change this week? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
-| 2 | [Vantage Wholesale Supply: Receivables Performance](project-2-vantage-receivables/) | Of the days DSO has risen, how many did we grant through longer terms, how many are customers taking, and how many are our own unapplied cash — and who should collections call first? | Excel · Power Query · SQL | ✅ Complete |
+| 2 | [Vantage Wholesale Supply: Receivables Performance](project-2-vantage-receivables/) | Of the days DSO has risen, how many did we grant through longer terms, how many are customers taking, and how many are our own unapplied cash — and who should collections call first? | Excel · Power Query · SQL · Streamlit | ✅ Complete |
 | 3 | [Lumen Optics Manufacturing: Photonics Spend Scorecard](project-3-lumen-optics-spend/) | Our prices are flat and every variance report is green — so why is material cost per accepted unit rising, and where should sourcing renegotiate first? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
 | 4 | [Talon Robotics: Payload Deployment Delivery](project-4-talon-robotics/) | Is the new payload ready to ship, and what is still open? | SQL Server · Power BI · DAX · Excel | ✅ Complete |
 | 5 | [Meridian UAV Services: Predictive Maintenance](project-5-meridian-uav/) | If we are 99.73% compliant, why do we keep having failures? | Python · SQL Server · Streamlit · Excel | ✅ Complete |
@@ -47,7 +47,8 @@ nothing to install. Or start with the project [README](project-1-ridgeline-field
 
 Three defects in the validation report are worth reading: a generator bug that produced a clean, plausible and entirely false finding ("47% of discount-terms invoices are 90+ days past due") which no balance-level check could see; an Excel build that reported success while producing a file full of `#REF!`; and a UAT case whose premise a later feature invalidated, so the test failed while the data was right. See [`docs/data_validation_report.md`](project-2-vantage-receivables/docs/data_validation_report.md).
 
-Start with the project [README](project-2-vantage-receivables/README.md) for the reproduction steps.
+**Try it live: [analytics-portfolio-vantage-receivables.streamlit.app](https://analytics-portfolio-vantage-receivables.streamlit.app/)**, the
+Streamlit app, with nothing to install. Or start with the project [README](project-2-vantage-receivables/README.md) for the reproduction steps.
 
 ## Project 3 at a glance
 
