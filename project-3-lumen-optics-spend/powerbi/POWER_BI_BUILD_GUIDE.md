@@ -172,8 +172,10 @@ erosion capture is red. The two cards sitting side by side is the argument.
 
 - Table: vendor, `Qty Received`, `Qty Accepted`, `Acceptance Rate %`, `Rejected Value`,
   `Cost per Accepted Unit`, `Cost Index vs Best`.
-- Filter `Dim_Part[PartNumber]` to a shared part (LOM-0072 is the worked example) to show the
-  cheapest vendor by unit price being the dearest per *accepted* unit.
+- Filter `Dim_Part[PartNumber]` to a shared part (LOM-0072 is the worked example) to show unit
+  price and cost per accepted unit ranking the vendors differently. Add a `Dim_Date[Year]` slicer:
+  in 2023 the cheapest vendor by unit price is the dearest per accepted unit; in 2024 and 2025 it is
+  the cheapest on both.
 
 ### Page 5 — Data quality
 

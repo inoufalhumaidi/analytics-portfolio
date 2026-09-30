@@ -54,7 +54,7 @@ project-3-lumen-optics-spend/
 │   ├── 03_core_views.sql             the landed cost identity + dated contract resolution
 │   ├── 04_data_quality_checks.sql    10 behavioural checks + a gate that can fail the build
 │   ├── 05_kpi_views.sql              the erosion model, vendor scorecard and renegotiation queue
-│   ├── 06_stored_procedures.sql      the reusable interface — 7 procedures, all @AsOf-aware
+│   ├── 06_stored_procedures.sql      the reusable interface — 6 procedures, all @AsOf-aware
 │   └── 07_uat_test_cases.sql         21 acceptance tests; raises and stops on failure
 ├── erp_extracts/                     11 CSVs (6,803 rows) + the scripts that write and check them
 ├── excel/
@@ -96,24 +96,28 @@ on every row — where a category manager can see it, challenge it and change it
 
 ---
 
-## The cheapest supplier is the most expensive one
+## The cheapest price was the dearest usable part — until the price fell further
 
-Part LOM-0072, three qualified suppliers:
+Part LOM-0072, three qualified suppliers, **cost per accepted unit** by order year:
 
-| Vendor | Avg unit price | Acceptance | **Cost per accepted unit** |
-|---|---:|---:|---:|
-| **VEN-004** | **$184.14** (cheapest) | 91.61% | **$204.71** |
-| VEN-012 | $197.43 | 98.99% | **$204.44** ← cheaper |
-| VEN-009 | $211.49 | 99.09% | $213.94 |
+| Vendor | 2023 | 2024 | 2025 | All history | Avg unit price | Acceptance |
+|---|---:|---:|---:|---:|---:|---:|
+| **VEN-004** | **$227.76** (dearest) | **$192.58** (cheapest) | **$168.28** (cheapest) | $204.71 | **$184.14** (cheapest) | 91.61% |
+| VEN-012 | $212.00 | $204.35 | $189.42 | $204.44 | $197.43 | 98.99% |
+| VEN-009 | $223.59 | — | $193.55 | $213.94 | $211.49 | 99.09% |
 
-A 6.7% price advantage entirely erased by rejections. Across the book, **$1,571,168** of material
-was paid for and cannot be used.
+In 2023 VEN-004 was the cheapest per unit and the dearest per usable part: its rejects (9%) cost
+more than its price saved. Its prices then fell 11–16% a year, and in 2024 and 2025 it was the
+cheapest per accepted unit on all three parts it shares. All history blends the two into a 27-cent
+tie. So suppliers are compared on cost per accepted unit **over a recent window** — never on unit
+price, and never on all history. VEN-004's quality problem is still real: **$289,024** of the
+**$1,571,168** of material paid for and unusable is its.
 
 `✦` "Avg unit price" is the simple average across that vendor's lines — the number a category
 manager reads off a price list. Cost per accepted unit is necessarily quantity-weighted, because it
 is a total divided by a total. Weighting the price column the same way would only sharpen the
 point: VEN-004 comes out at $183.81 against VEN-012's $198.72, a 7.5% advantage rather than 6.7%,
-and still loses on cost per accepted unit.
+and the cost per accepted unit is unchanged, because it is a total over a total either way.
 
 ---
 

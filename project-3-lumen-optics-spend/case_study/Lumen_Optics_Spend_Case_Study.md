@@ -123,26 +123,41 @@ erosion.** But the sharper cut is by leverage:
 Both figures are **spend-weighted**, on the same basis as the 29.50% headline. An earlier draft of
 this table quoted simple averages (37.77% and 10.88%), which are not comparable to the headline and
 understated the gap — weighting by money widens it from 3.5× to 4.3×. Across 185 pairs ranging from
-roughly $40,000 to several million in annual spend, an unweighted average lets a small pair count as
-heavily as one carrying a hundred times the money.
+under $4,000 to over $1 million in trailing-twelve-month spend, an unweighted average lets a small
+pair count as heavily as one carrying nearly three hundred times the money.
 
 That is not a surprise economically — it is what anyone would predict. What matters is that it is
 now **quantified**: 36% of the total opportunity sits behind parts where the negotiating position
 is half as strong, and treating those two populations identically in a sourcing plan wastes the
 year.
 
-### 4.2 The cheapest supplier is the most expensive one
+### 4.2 The cheapest price was the dearest usable part — until the price fell further
 
-VEN-004 undercuts every competitor on laser diodes. On part LOM-0072, three qualified suppliers:
+VEN-004 undercuts every competitor on laser diodes, on all three parts it shares with them, in
+every year. It also rejects far more of what it ships: on LOM-0072, 8.4% against 1.0% for the other
+two suppliers — 8.4 times the rate. Whether it is the cheapest *usable* supplier therefore depends
+on which is moving faster, its price or its rejects, and on these parts the answer changed.
 
-| Vendor | Avg unit price | Acceptance | **Cost per accepted unit** |
-|---|---:|---:|---:|
-| **VEN-004** | **$184.14** (cheapest) | 91.61% | **$204.71** |
-| VEN-012 | $197.43 | 98.99% | **$204.44** ← cheaper |
-| VEN-009 | $211.49 | 99.09% | $213.94 |
+Part LOM-0072, three qualified suppliers, **cost per accepted unit** by order year:
 
-VEN-004's 6.7% price advantage is entirely erased by a rejection rate seven times its
-competitors'. On this part it is not merely no cheaper — it is **dearer per usable component**.
+| Vendor | 2023 | 2024 | 2025 | All history | Avg unit price | Acceptance |
+|---|---:|---:|---:|---:|---:|---:|
+| **VEN-004** | **$227.76** (dearest) | **$192.58** (cheapest) | **$168.28** (cheapest) | $204.71 | **$184.14** (cheapest) | 91.61% |
+| VEN-012 | $212.00 | $204.35 | $189.42 | $204.44 | $197.43 | 98.99% |
+| VEN-009 | $223.59 | — | $193.55 | $213.94 | $211.49 | 99.09% |
+
+In 2023 VEN-004 was the cheapest per unit and the **dearest per usable component**: a 2% price
+advantage did not cover a 9% rejection rate, and on every shared part it cost more per accepted unit
+than the best alternative. Its prices then fell between 11% and 16% a year, far faster than its
+rejection rate moved, and in 2024 and 2025 it was the **cheapest per accepted unit on all three
+shared parts** — on LOM-0072 in 2025, by $21 a unit. Over all history the two effects nearly cancel:
+$204.71 against VEN-012's $204.44 is a blend of one bad year and two good ones, not a finding.
+
+Two lessons, and neither is "drop the cheap supplier". Compare suppliers on **cost per accepted
+unit**, never unit price: unit price got 2023 wrong. And compare them over a **recent window**, not
+all history: all history calls 2025 a 27-cent tie. The quality problem is still real — VEN-004
+accounts for **$289,024 (18%)** of the material Lumen paid for and could not use — and fixing it
+would make the best-value supplier on these parts cheaper still.
 
 A component that arrives outside specification was still paid for, still freighted, and cannot be
 built into a module. Unit price cannot see any of that; cost per accepted unit is the only
@@ -162,13 +177,13 @@ There is nothing to renegotiate until there is something to renegotiate, which i
 `PUT_ON_CONTRACT` is a distinct action in the queue carrying **$1,623,978** of opportunity across
 48 pairs.
 
-### 4.4 Three metrics are green while a cohort inside them has failed
+### 4.4 Portfolio figures hide the cohorts that are failing
 
 | Metric | Portfolio | Status | The cohort underneath |
 |---|---:|:---:|---|
 | Acceptance rate | 99.11% | **Green** | VEN-004 on Laser Diode: **91.4%** |
-| On-time delivery | 80.62% | Red | VEN-009: **59.64%**, decayed from 83% through 2025 |
-| Expedite spend | 0.23% | **Green** | Doubled between 2023 and 2025 on long-lead parts |
+| On-time delivery | 80.62% | Red | VEN-009: **20.8%** of 2025 orders on time, against 83% in 2023 |
+| Expedite spend | 0.23% | **Green** | Doubled between 2023 and 2025 across the book (0.12% → 0.23%) |
 
 The acceptance figure is the instructive one. At vendor level VEN-004 sits at 98.3% and looks
 unremarkable; only the **vendor × category** cut exposes 91.4%. A portfolio average cannot breach
@@ -196,7 +211,7 @@ a quarter, so the queue stays complete for audit and marks what is actually work
 
 Four design decisions are worth naming:
 
-- **Ranking is by money; the ACTION is by leverage.** The largest gaps sit on sole-source parts
+- **Ranking is by money; the ACTION is by leverage.** Per pair, the largest gaps sit on sole-source parts
   where there is no credible threat to make. Ranking on value alone sends a category manager into
   meetings they cannot win, which is the fastest way to lose a sourcing team's trust in a report.
 - **Quality outranks price.** If the loss is rejected material rather than price, a price
@@ -216,11 +231,11 @@ Four design decisions are worth naming:
 | **1** | **Work the quarter's 43 pairs**, starting with the 20 `PUT_ON_CONTRACT` | Category managers | 43 pairs carry 66.1% of the total gap | **$2,673,946** of the $4.05M |
 | **2** | **Re-paper the lapsed agreements** before negotiating anything on them | Sourcing ops | 27.09% of spend has no agreement in force | Unlocks **$1,623,978** that cannot be negotiated today |
 | **3** | **Add erosion capture to the monthly pack**, beside purchase price variance | CPO | PPV reads −0.19% Green while $4.05M walks out | Makes the invisible loss visible monthly |
-| **4** | **Move the laser diode volume off VEN-004** on shared parts | Optoelectronics | Cheapest per unit, dearest per *accepted* unit on every shared part | Part of the **$1,571,168** of unusable material |
-| **5** | **Start a second source on the three largest sole-source parts** | Category managers | Sole-source capture is 8.91% against 38.26% where alternatives exist | Attacks **$1,470,952** where leverage is weakest |
-| **6** | **Put VEN-009 on a delivery corrective action** | Supplier quality | On-time fell from 83% to 59.64% through 2025 | Removes the driver behind rising expedite fees |
+| **4** | **Keep VEN-004 on laser diodes, and put its rejection rate under corrective action** | Optoelectronics, with supplier quality | Cheapest per *accepted* unit on all three shared parts in 2024 and 2025, but rejecting 8.4 times as often as its competitors | **$289,024** of the **$1,571,168** of unusable material is VEN-004's |
+| **5** | **Qualify a second source on the 8 `DUAL_SOURCE` pairs** | Category managers | Sole-source capture is 8.91% against 38.26% where alternatives exist; these 8 carry at least $40,000 a year and can be requalified within 8 months | **$515,330**, all 8 scheduled this quarter |
+| **6** | **Put VEN-009 on a delivery corrective action** | Supplier quality | On time for 83% of 2023 orders and 20.8% of 2025's (59.64% over all history) | The worst delivery record of the 36 vendors |
 | **7** | **Report every aggregate with its cohort cut** | Analytics | Acceptance is 99.11% company-wide and 91.4% for one vendor-category | Stops green lights hiding failing cohorts |
-| **8** | **Resolve the 61 overlapping agreements** | Sourcing ops | Contracted price — and therefore PPV — is ambiguous on $1,495,917 of spend | Makes the variance figure meaningful |
+| **8** | **Resolve the 6 overlapping agreements** | Sourcing ops | Contracted price — and therefore PPV — is ambiguous on 61 PO lines, $1,495,917 of spend | Makes the variance figure meaningful |
 
 Recommendations 2 and 3 cost nothing but a decision. Recommendation 1 is what the sourcing team
 does on Monday.

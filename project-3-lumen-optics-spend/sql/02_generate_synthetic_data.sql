@@ -277,7 +277,9 @@ UPDATE #PartVendor SET
         ELSE                   AnnualErosionPct * (1.15 + rBehav * 0.25) END;
 
 -- P2  Cheap-but-rejected: one vendor undercuts on laser diodes and fails
---     inspection often enough to be the most expensive per accepted unit.
+--     inspection often enough to be the most expensive per accepted unit -- in the first year.
+--     Its aggressive erosion (x1.9) then outruns the rejects: by 2024 it is the cheapest per
+--     accepted unit on every part it shares, which is what the case study reports.
 --
 --     The vendor is DERIVED from the data, not named. Vendor-part assignment
 --     is random, so naming a vendor up front risks picking one that supplies
@@ -501,7 +503,8 @@ FROM (SELECT l.*, POSeq = ROW_NUMBER() OVER (ORDER BY l.OrderDate, l.PartKey, l.
 --
 -- P2  Cheap-but-rejected. VEN-021 undercuts everyone on laser diodes and fails
 --     beam-profile inspection often enough that its cost per ACCEPTED unit is
---     the worst on the category. Unit price alone cannot see this.
+--     the worst on the category. Unit price alone cannot see this. (With the erosion above,
+--     this holds for 2023; the case study reports how the ranking then moves.)
 -- P7  Delivery decay: VEN-009 slips progressively later through 2025.
 -- =============================================================================
 IF OBJECT_ID('tempdb..#Rcpt') IS NOT NULL DROP TABLE #Rcpt;

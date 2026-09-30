@@ -329,7 +329,7 @@ component with a specific supplier, not about a vendor in the abstract.
 
 RANKING is by annual opportunity, but ACTION is decided by leverage, and the
 two are deliberately separate. The largest opportunity in this book sits on
-sole-source parts where there is no credible threat to make; ranking on money
+sole-source parts (per pair) where there is no credible threat to make; ranking on money
 alone would send a category manager into a meeting they cannot win.
 
 LEVERAGE SCORE (0-100) combines the only four things that actually decide a

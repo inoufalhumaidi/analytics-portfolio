@@ -111,13 +111,9 @@ CostPerAcceptedUnit = LandedCost ÷ QtyAccepted
 <p>A contracted price is true between two dates and false outside them. Storing it on the part or the vendor would let today's contract retroactively govern a purchase made two years ago, so every historical variance would be measured against a price that did not exist at the time.</p>
 <p>Two consequences the model has to handle explicitly:</p>
 <ul>
-<li><strong>An open-ended agreement is still in force.</strong> Excluding <code>NULL</code> end dates is the usual way</li>
+<li><strong>An open-ended agreement is still in force.</strong> Excluding <code>NULL</code> end dates is the usual way contract coverage is made to look far worse than it is. 1,333 lines here are governed by one of 187 open agreements (UAT-03).</li>
+<li><strong>Overlapping agreements make the contracted price ambiguous.</strong> 61 lines have two agreements in force at once. The resolution is deterministic by construction — latest start, then highest key — and the ambiguity is <em>reported</em> rather than silently resolved, because a variance computed off a coin-flip is a number with no error bar.</li>
 </ul>
-<p>contract coverage is made to look far worse than it is. 1,333 lines here are governed by one of 187 open agreements (UAT-03).</p>
-<ul>
-<li><strong>Overlapping agreements make the contracted price ambiguous.</strong> 61 lines have two agreements in</li>
-</ul>
-<p>force at once. The resolution is deterministic by construction — latest start, then highest key — and the ambiguity is <em>reported</em> rather than silently resolved, because a variance computed off a coin-flip is a number with no error bar.</p>
 <h3>3.3 Every number computed twice</h3>
 <p>Each headline figure is implemented independently in T-SQL and again in Excel formulas, then reconciled on the workbook's Validation sheet in the open. <strong>All 14 checks agree</strong>, and the workbook says so on its own face.</p>
 <hr/>
@@ -184,43 +180,57 @@ CostPerAcceptedUnit = LandedCost ÷ QtyAccepted
 </tr>
 </tbody></table>
 <blockquote><p><strong>Sole-source suppliers capture 8.91% of the expected erosion; competitive ones capture 38.26%.</strong> Suppliers hold price precisely where Lumen cannot leave.</p></blockquote>
-<p>Both figures are <strong>spend-weighted</strong>, on the same basis as the 29.50% headline. An earlier draft of this table quoted simple averages (37.77% and 10.88%), which are not comparable to the headline and understated the gap — weighting by money widens it from 3.5× to 4.3×. Across 185 pairs ranging from roughly $40,000 to several million in annual spend, an unweighted average lets a small pair count as heavily as one carrying a hundred times the money.</p>
+<p>Both figures are <strong>spend-weighted</strong>, on the same basis as the 29.50% headline. An earlier draft of this table quoted simple averages (37.77% and 10.88%), which are not comparable to the headline and understated the gap — weighting by money widens it from 3.5× to 4.3×. Across 185 pairs ranging from under $4,000 to over $1 million in trailing-twelve-month spend, an unweighted average lets a small pair count as heavily as one carrying nearly three hundred times the money.</p>
 <p>That is not a surprise economically — it is what anyone would predict. What matters is that it is now <strong>quantified</strong>: 36% of the total opportunity sits behind parts where the negotiating position is half as strong, and treating those two populations identically in a sourcing plan wastes the year.</p>
-<h3>4.2 The cheapest supplier is the most expensive one</h3>
-<p>VEN-004 undercuts every competitor on laser diodes. On part LOM-0072, three qualified suppliers:</p>
+<h3>4.2 The cheapest price was the dearest usable part — until the price fell further</h3>
+<p>VEN-004 undercuts every competitor on laser diodes, on all three parts it shares with them, in every year. It also rejects far more of what it ships: on LOM-0072, 8.4% against 1.0% for the other two suppliers — 8.4 times the rate. Whether it is the cheapest <em>usable</em> supplier therefore depends on which is moving faster, its price or its rejects, and on these parts the answer changed.</p>
+<p>Part LOM-0072, three qualified suppliers, <strong>cost per accepted unit</strong> by order year:</p>
 <table><thead><tr>
 <th style="text-align:left">Vendor</th>
+<th style="text-align:right">2023</th>
+<th style="text-align:right">2024</th>
+<th style="text-align:right">2025</th>
+<th style="text-align:right">All history</th>
 <th style="text-align:right">Avg unit price</th>
 <th style="text-align:right">Acceptance</th>
-<th style="text-align:right"><strong>Cost per accepted unit</strong></th>
 </tr></thead><tbody>
 <tr>
 <td style="text-align:left"><strong>VEN-004</strong></td>
+<td style="text-align:right"><strong>$227.76</strong> (dearest)</td>
+<td style="text-align:right"><strong>$192.58</strong> (cheapest)</td>
+<td style="text-align:right"><strong>$168.28</strong> (cheapest)</td>
+<td style="text-align:right">$204.71</td>
 <td style="text-align:right"><strong>$184.14</strong> (cheapest)</td>
 <td style="text-align:right">91.61%</td>
-<td style="text-align:right"><strong>$204.71</strong></td>
 </tr>
 <tr>
 <td style="text-align:left">VEN-012</td>
+<td style="text-align:right">$212.00</td>
+<td style="text-align:right">$204.35</td>
+<td style="text-align:right">$189.42</td>
+<td style="text-align:right">$204.44</td>
 <td style="text-align:right">$197.43</td>
 <td style="text-align:right">98.99%</td>
-<td style="text-align:right"><strong>$204.44</strong> ← cheaper</td>
 </tr>
 <tr>
 <td style="text-align:left">VEN-009</td>
+<td style="text-align:right">$223.59</td>
+<td style="text-align:right">—</td>
+<td style="text-align:right">$193.55</td>
+<td style="text-align:right">$213.94</td>
 <td style="text-align:right">$211.49</td>
 <td style="text-align:right">99.09%</td>
-<td style="text-align:right">$213.94</td>
 </tr>
 </tbody></table>
-<p>VEN-004's 6.7% price advantage is entirely erased by a rejection rate seven times its competitors'. On this part it is not merely no cheaper — it is <strong>dearer per usable component</strong>.</p>
+<p>In 2023 VEN-004 was the cheapest per unit and the <strong>dearest per usable component</strong>: a 2% price advantage did not cover a 9% rejection rate, and on every shared part it cost more per accepted unit than the best alternative. Its prices then fell between 11% and 16% a year, far faster than its rejection rate moved, and in 2024 and 2025 it was the <strong>cheapest per accepted unit on all three shared parts</strong> — on LOM-0072 in 2025, by $21 a unit. Over all history the two effects nearly cancel: $204.71 against VEN-012's $204.44 is a blend of one bad year and two good ones, not a finding.</p>
+<p>Two lessons, and neither is "drop the cheap supplier". Compare suppliers on <strong>cost per accepted unit</strong>, never unit price: unit price got 2023 wrong. And compare them over a <strong>recent window</strong>, not all history: all history calls 2025 a 27-cent tie. The quality problem is still real — VEN-004 accounts for <strong>$289,024 (18%)</strong> of the material Lumen paid for and could not use — and fixing it would make the best-value supplier on these parts cheaper still.</p>
 <p>A component that arrives outside specification was still paid for, still freighted, and cannot be built into a module. Unit price cannot see any of that; cost per accepted unit is the only comparison that can.</p>
 <p>Across the book this costs <strong>$1,571,168</strong> of material paid for and unusable.</p>
 <h3>4.3 A quarter of the spend has nothing to negotiate against</h3>
 <p><strong>Maverick spend: 27.09%</strong> — against a 5% target and a 12% warning.</p>
 <p>The cause is not rogue buying; it is contracts quietly expiring. Roughly one agreement in seven is never renewed, and purchasing simply continues at drifting spot prices. Maverick spend and the erosion failure turn out to be the same story: a lapsed contract is a price nobody is watching.</p>
 <p>There is nothing to renegotiate until there is something to renegotiate, which is why <code>PUT_ON_CONTRACT</code> is a distinct action in the queue carrying <strong>$1,623,978</strong> of opportunity across 48 pairs.</p>
-<h3>4.4 Three metrics are green while a cohort inside them has failed</h3>
+<h3>4.4 Portfolio figures hide the cohorts that are failing</h3>
 <table><thead><tr>
 <th style="text-align:left">Metric</th>
 <th style="text-align:right">Portfolio</th>
@@ -237,13 +247,13 @@ CostPerAcceptedUnit = LandedCost ÷ QtyAccepted
 <td style="text-align:left">On-time delivery</td>
 <td style="text-align:right">80.62%</td>
 <td style="text-align:center">Red</td>
-<td style="text-align:left">VEN-009: <strong>59.64%</strong>, decayed from 83% through 2025</td>
+<td style="text-align:left">VEN-009: <strong>20.8%</strong> of 2025 orders on time, against 83% in 2023</td>
 </tr>
 <tr>
 <td style="text-align:left">Expedite spend</td>
 <td style="text-align:right">0.23%</td>
 <td style="text-align:center"><strong>Green</strong></td>
-<td style="text-align:left">Doubled between 2023 and 2025 on long-lead parts</td>
+<td style="text-align:left">Doubled between 2023 and 2025 across the book (0.12% → 0.23%)</td>
 </tr>
 </tbody></table>
 <p>The acceptance figure is the instructive one. At vendor level VEN-004 sits at 98.3% and looks unremarkable; only the <strong>vendor × category</strong> cut exposes 91.4%. A portfolio average cannot breach until the whole book does, and by then the cohort that caused it has been failing for a year.</p>
@@ -297,21 +307,11 @@ CostPerAcceptedUnit = LandedCost ÷ QtyAccepted
 </tbody></table>
 <p>Four design decisions are worth naming:</p>
 <ul>
-<li><strong>Ranking is by money; the ACTION is by leverage.</strong> The largest gaps sit on sole-source parts</li>
+<li><strong>Ranking is by money; the ACTION is by leverage.</strong> Per pair, the largest gaps sit on sole-source parts where there is no credible threat to make. Ranking on value alone sends a category manager into meetings they cannot win, which is the fastest way to lose a sourcing team's trust in a report.</li>
+<li><strong>Quality outranks price.</strong> If the loss is rejected material rather than price, a price conversation is the wrong conversation. <code>FIX_QUALITY</code> routes those to a corrective action.</li>
+<li><strong>Above $100,000 a year, ask anyway.</strong> Weak leverage is a reason to expect a hard conversation, not a reason to skip one. Before this rule existed, a $179k annual gap was classified <code>ACCEPT</code> because the supplier was large enough not to care.</li>
+<li><strong><code>ACCEPT</code> is an honest answer.</strong> 73 pairs worth $276k in total — averaging under $4k each — are parked with a reason. Saying so is more useful than listing them forever.</li>
 </ul>
-<p>where there is no credible threat to make. Ranking on value alone sends a category manager into meetings they cannot win, which is the fastest way to lose a sourcing team's trust in a report.</p>
-<ul>
-<li><strong>Quality outranks price.</strong> If the loss is rejected material rather than price, a price</li>
-</ul>
-<p>conversation is the wrong conversation. <code>FIX_QUALITY</code> routes those to a corrective action.</p>
-<ul>
-<li><strong>Above $100,000 a year, ask anyway.</strong> Weak leverage is a reason to expect a hard conversation,</li>
-</ul>
-<p>not a reason to skip one. Before this rule existed, a $179k annual gap was classified <code>ACCEPT</code> because the supplier was large enough not to care.</p>
-<ul>
-<li><strong><code>ACCEPT</code> is an honest answer.</strong> 73 pairs worth $276k in total — averaging under $4k each —</li>
-</ul>
-<p>are parked with a reason. Saying so is more useful than listing them forever.</p>
 <hr/>
 <h2>6. Recommendations</h2>
 <table><thead><tr>
@@ -344,24 +344,24 @@ CostPerAcceptedUnit = LandedCost ÷ QtyAccepted
 </tr>
 <tr>
 <td style="text-align:left"><strong>4</strong></td>
-<td style="text-align:left"><strong>Move the laser diode volume off VEN-004</strong> on shared parts</td>
-<td style="text-align:left">Optoelectronics</td>
-<td style="text-align:left">Cheapest per unit, dearest per <em>accepted</em> unit on every shared part</td>
-<td style="text-align:left">Part of the <strong>$1,571,168</strong> of unusable material</td>
+<td style="text-align:left"><strong>Keep VEN-004 on laser diodes, and put its rejection rate under corrective action</strong></td>
+<td style="text-align:left">Optoelectronics, with supplier quality</td>
+<td style="text-align:left">Cheapest per <em>accepted</em> unit on all three shared parts in 2024 and 2025, but rejecting 8.4 times as often as its competitors</td>
+<td style="text-align:left"><strong>$289,024</strong> of the <strong>$1,571,168</strong> of unusable material is VEN-004's</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>5</strong></td>
-<td style="text-align:left"><strong>Start a second source on the three largest sole-source parts</strong></td>
+<td style="text-align:left"><strong>Qualify a second source on the 8 <code>DUAL_SOURCE</code> pairs</strong></td>
 <td style="text-align:left">Category managers</td>
-<td style="text-align:left">Sole-source capture is 8.91% against 38.26% where alternatives exist</td>
-<td style="text-align:left">Attacks <strong>$1,470,952</strong> where leverage is weakest</td>
+<td style="text-align:left">Sole-source capture is 8.91% against 38.26% where alternatives exist; these 8 carry at least $40,000 a year and can be requalified within 8 months</td>
+<td style="text-align:left"><strong>$515,330</strong>, all 8 scheduled this quarter</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>6</strong></td>
 <td style="text-align:left"><strong>Put VEN-009 on a delivery corrective action</strong></td>
 <td style="text-align:left">Supplier quality</td>
-<td style="text-align:left">On-time fell from 83% to 59.64% through 2025</td>
-<td style="text-align:left">Removes the driver behind rising expedite fees</td>
+<td style="text-align:left">On time for 83% of 2023 orders and 20.8% of 2025's (59.64% over all history)</td>
+<td style="text-align:left">The worst delivery record of the 36 vendors</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong>7</strong></td>
@@ -372,9 +372,9 @@ CostPerAcceptedUnit = LandedCost ÷ QtyAccepted
 </tr>
 <tr>
 <td style="text-align:left"><strong>8</strong></td>
-<td style="text-align:left"><strong>Resolve the 61 overlapping agreements</strong></td>
+<td style="text-align:left"><strong>Resolve the 6 overlapping agreements</strong></td>
 <td style="text-align:left">Sourcing ops</td>
-<td style="text-align:left">Contracted price — and therefore PPV — is ambiguous on $1,495,917 of spend</td>
+<td style="text-align:left">Contracted price — and therefore PPV — is ambiguous on 61 PO lines, $1,495,917 of spend</td>
 <td style="text-align:left">Makes the variance figure meaningful</td>
 </tr>
 </tbody></table>
@@ -401,21 +401,17 @@ CostPerAcceptedUnit = LandedCost ÷ QtyAccepted
 <hr/>
 <h2>8. What I would do differently</h2>
 <ul>
-<li><strong>Derive planted patterns from the data, never name them.</strong> §7.1 cost a full profiling cycle,</li>
+<li><strong>Derive planted patterns from the data, never name them.</strong> §7.1 cost a full profiling cycle, and the failure mode — a zero-row <code>UPDATE</code> — is silent by design in SQL.</li>
 </ul>
-<p>and the failure mode — a zero-row <code>UPDATE</code> — is silent by design in SQL.</p>
 <ul>
-<li><strong>Treat "a number that did not move" as a finding.</strong> §7.2 was caught only because I compared</li>
+<li><strong>Treat "a number that did not move" as a finding.</strong> §7.2 was caught only because I compared two runs. A generator change that does not change its output is either a no-op or a broken dependency, and both deserve investigation before the data is used.</li>
 </ul>
-<p>two runs. A generator change that does not change its output is either a no-op or a broken dependency, and both deserve investigation before the data is used.</p>
 <ul>
-<li><strong>Build the should-cost model alongside the erosion model.</strong> Erosion measures the failure to</li>
+<li><strong>Build the should-cost model alongside the erosion model.</strong> Erosion measures the failure to decline <em>from the first observed price</em>. It cannot say whether that opening price was fair — a part bought badly in 2023 and eroded perfectly since looks healthy here. That is a real limitation and the case for the complementary analysis, not a caveat to bury.</li>
 </ul>
-<p>decline <em>from the first observed price</em>. It cannot say whether that opening price was fair — a part bought badly in 2023 and eroded perfectly since looks healthy here. That is a real limitation and the case for the complementary analysis, not a caveat to bury.</p>
 <ul>
-<li><strong>Put the leverage cut in front of the opportunity ranking, not beside it.</strong> The most useful</li>
+<li><strong>Put the leverage cut in front of the opportunity ranking, not beside it.</strong> The most useful single table in this study is §4.1's sole-source comparison, and it emerged from a review query rather than from the designed output. It should have been a headline from the start.</li>
 </ul>
-<p>single table in this study is §4.1's sole-source comparison, and it emerged from a review query rather than from the designed output. It should have been a headline from the start.</p>
 <hr/>
 <h2>9. How to verify any figure in this study</h2>
 <pre><code>

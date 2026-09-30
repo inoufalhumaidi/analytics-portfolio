@@ -299,7 +299,7 @@ Two things about that result deserve saying plainly rather than being reported a
    fixing before it becomes material" rather than "this is fine".
 
 2. **The largest defect by value is deliberately outside the calculation.** `AMBIGUOUS_CONTRACT`
-   at $1,495,917 is nearly twice the exposure figure, and it is excluded because it does not
+   at $1,495,917 is more than twice the exposure figure, and it is excluded because it does not
    mis-state *how much was spent* — it mis-states whether the purchase price variance computed on
    that spend means anything. A ratio problem, not a total problem. The gate is right to exclude
    it and this report would be wrong not to mention it.

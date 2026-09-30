@@ -30,9 +30,9 @@ rather than take it.
 | **BR-04** | Show what the learning curve should have delivered and what was actually captured | CPO | M | `fn_PriceErosion(@AsOf,…)`; `Ref_PriceErosionBenchmark` | UAT-05, UAT-06, UAT-07 | Erosion capture **29.50%** against an 80% target |
 | **BR-05** | Quantify the annual value of the erosion gap | CFO | M | `AnnualOpportunity` in `fn_PriceErosion` | UAT-21 | **$4,047,609** a year, gross |
 | **BR-06** | Identify spend with no agreement in force | Sourcing ops | M | `IsOnContract` in `fn_POLineCost` | UAT-03 | Maverick spend **27.09%** against a 5% target |
-| **BR-07** | Compare suppliers on cost per USABLE unit, not unit price | Category managers | M | `CostPerAcceptedUnit`; `CostIndexVsBest` in `fn_VendorScorecard` | UAT-12 | VEN-004 cheapest per unit on LOM-0072 and **dearest per accepted unit** |
+| **BR-07** | Compare suppliers on cost per USABLE unit, not unit price | Category managers | M | `CostPerAcceptedUnit`; `CostIndexVsBest` in `fn_VendorScorecard` | UAT-12 | VEN-004 cheapest per unit on LOM-0072 in every year; **dearest per accepted unit in 2023, cheapest in 2024 and 2025** |
 | **BR-08** | Produce a ranked worklist of which supplier-part pair to renegotiate first | CPO | M | `fn_RenegotiationQueue(@AsOf, @PerBuyer)` | UAT-08, 09, 10 | **185** pairs ranked; **43** workable this quarter |
-| **BR-09** | Decide the ACTION by leverage, not only by value | Category managers | M | `LeverageScore` + the `ActionCode` ladder | UAT-08 | 5 action types; sole-source routed to `DUAL_SOURCE` |
+| **BR-09** | Decide the ACTION by leverage, not only by value | Category managers | M | `LeverageScore` + the `ActionCode` ladder | UAT-08 | 5 action types; 8 of the 33 sole-source pairs routed to `DUAL_SOURCE`, where requalification is within 8 months |
 | **BR-10** | Bound the worklist to what a category manager can actually run | CPO | M | `IsThisQuarter`, `BuyerRank`, `@NegotiationsPerBuyer` | UAT-10 | 43 pairs covering **66.1%** of the gap |
 | **BR-11** | Assign each negotiation to the person who actually buys the part | Sourcing ops | S | Spend-weighted `PrimaryBuyer` in the queue | UAT-11 | 0 mismatches across 185 pairs |
 | **BR-12** | Say plainly where there is no leverage and no case for creating any | Category managers | S | `ACCEPT` action with a written reason | UAT-09 | 73 pairs / $276,461, largest single $30,142 |
@@ -120,7 +120,7 @@ rounding fix.
 
 | ID | Requirement | How met | Evidence |
 |---|---|---|---|
-| **NFR-01** | Any consumer can query without knowing the internals | Seven `@AsOf`-parameterised procedures | `sql/06` |
+| **NFR-01** | Any consumer can query without knowing the internals | Six `@AsOf`-parameterised procedures, plus the data-quality gate | `sql/06`, `sql/04` |
 | **NFR-02** | No SQL injection surface | `@GroupBy` resolved by `CASE`, never concatenated | `usp_CategorySummary` raises on `'DROP TABLE'` (UAT-14) |
 | **NFR-03** | Thresholds defined once | `Ref_SpendTargets` read by SQL, DAX (`CALCULATE` over `REMOVEFILTERS ( Ref_SpendTargets )`, so no report filter moves a threshold) and Excel `INDEX/MATCH` | Changing a target changes the status in all three |
 | **NFR-04** | The benchmark assumption is visible and challengeable | `Ref_PriceErosionBenchmark` with a `SourceNote` per row | 8 categories, each with provenance |
