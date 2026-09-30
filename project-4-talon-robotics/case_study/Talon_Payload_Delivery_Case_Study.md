@@ -227,12 +227,17 @@ actually schedulable.
 and 272 airframe hours, 34 flights, that no rig can do.**
 
 Each item is costed by what its action needs, not by the tests it happens to have: every test at or
-above the level its policy demands, one new test where none exists yet at that level (91 items need
+above the level its policy demands, one new test where none exists yet at that level (99 items need
 one written first; pricing each at a single run is a floor), and nothing for a signature. Field
 evidence needs the airframe — one aircraft, weather and a crew — so its hours are reported beside
 the rig figure and never divided by rig capacity, and no item that needs a flight is booked into
 the rig week. The data holds no airframe capacity, so those 272 hours are costed, not scheduled;
 with one aircraft they are the likelier constraint.
+
+The 69 is what the **rigs** can take, not everything that can happen this week. 64 of the 226 items
+need neither a rig nor a flight — countersignatures, reviews and Integration-level tests — and rig
+capacity does not hold them back, although 47 of them rank below the rig cut. Both countersignatures
+are among them.
 
 | Action | What it means | Who does it |
 |---|---|---|
