@@ -57,6 +57,14 @@ st.set_page_config(
 )
 
 RED, AMBER, GREEN, GREY = "#c00000", "#bf8f00", "#548235", "#808080"
+
+# The board in the order the story reads -- the two answers, the work they imply,
+# then the alarm's three measures -- not in whatever order the source returns:
+# the extract is alphabetical, and the SQL form is a UNION ALL with no ORDER BY.
+# A metric not listed here is shown last rather than hidden.
+BOARD_ORDER = ["HourCompliancePct", "StressCompliancePct", "OverdueFlightCritical",
+               "UnscheduledRatePct", "AirframeAvailabilityPct",
+               "PredictionPrecisionPct", "PredictionRecallPct", "ActionableLeadTimePct"]
 RAG = {"Red": RED, "Amber": AMBER, "Green": GREEN, "Grey": GREY}
 
 
@@ -154,7 +162,11 @@ if page == "The two answers":
                 f"Target {unsched['TargetValue']:.0f}% - the fleet is maintained by its failures")
 
     st.subheader("The whole board")
-    board = data["fleet_kpi"][["MetricName", "MetricValue", "TargetValue", "RAGStatus", "Description"]]
+    rank = {m: i for i, m in enumerate(BOARD_ORDER)}
+    board = (data["fleet_kpi"]
+             .assign(_order=lambda d: d["MetricName"].map(rank).fillna(len(rank)))
+             .sort_values(["_order", "MetricName"])
+             [["MetricName", "MetricValue", "TargetValue", "RAGStatus", "Description"]])
     st.dataframe(board, width="stretch", hide_index=True)
 
 

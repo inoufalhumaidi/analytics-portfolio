@@ -108,6 +108,12 @@ Server the comparison is reported as NOT RUN, and not counted.
 # difference beyond the fourth decimal is drift, whichever column it is in.
 DEFAULT_TOLERANCE = 5e-5
 
+# The order the "whole board" table must show: the two answers, then the work
+# they imply, then the alarm's three measures.
+BOARD_EXPECTED = ["HourCompliancePct", "StressCompliancePct", "OverdueFlightCritical",
+                  "UnscheduledRatePct", "AirframeAvailabilityPct",
+                  "PredictionPrecisionPct", "PredictionRecallPct", "ActionableLeadTimePct"]
+
 
 # Columns a SQL form returns that its extract deliberately does not carry:
 # surrogate keys, the as-of date and parameters echoed back, and filter columns.
@@ -369,6 +375,14 @@ for label, expect in SCREENS:
         len(at.dataframe) >= expect["min_tables"],
         f"found {len(at.dataframe)}",
     )
+    # The board follows the story -- the two answers first -- whatever order the
+    # source returns: the extract is alphabetical, and the SQL form is a UNION
+    # ALL with no ORDER BY, so without an explicit order the board changed with
+    # the data source.
+    if label == "The two answers" and len(at.dataframe):
+        shown = list(at.dataframe[0].value["MetricName"])
+        check("  ...and lists the board in the story's order, whatever the source's order",
+              shown == BOARD_EXPECTED, f"shown {shown}")
 
 print("-" * 78)
 print(f"  {passed} passed, {failed} failed"

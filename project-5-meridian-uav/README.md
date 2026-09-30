@@ -79,7 +79,8 @@ nothing**. Fleet-wide: **37.81% → 66.43% actionable** for six points of precis
 92.22% actionable at 75.63% precision, so the information exists and the deployed rule discards it.
 A model over *exposure only* — Finding 1's variables — never reaches the precision floor at any
 threshold, so the stress model is **not** a substitute for condition monitoring. The operator needs
-both.
+both. Retrained under ten seeds (`python/seed_sensitivity.py`), telemetry clears the floor every time
+(88.89–97.78% actionable) and exposure never does.
 
 ---
 
@@ -99,6 +100,7 @@ project-5-meridian-uav/
 ├── python/
 │   ├── data_access.py                SQL first, CSV fallback, and it says which it used
 │   ├── degradation_model.py          three feature sets, evaluated on actionable lead time
+│   ├── seed_sensitivity.py           retrains each feature set under ten seeds; the comparison must hold
 │   └── outputs/                      metrics, sweeps and three figures
 ├── streamlit/
 │   ├── app.py                        five screens, each ending in a decision
@@ -186,7 +188,8 @@ powershell excel/Validate_Workbook.ps1                                 # expect 
 
 pip install -r python/requirements.txt
 python python/degradation_model.py
-python streamlit/validate_app.py        # 27/27 with SQL Server; without it 15 pass, 12 parity checks "not run"
+python python/seed_sensitivity.py       # telemetry clears the precision floor 10/10, exposure 0/10
+python streamlit/validate_app.py        # 28/28 with SQL Server; without it 16 pass, 12 parity checks "not run"
 streamlit run streamlit/app.py
 ```
 

@@ -275,6 +275,7 @@ stress hours = flight hours × profile multiplier
 <td style="text-align:right">13.18 h</td>
 </tr>
 </tbody></table>
+<p><strong>None of these figures is one lucky draw.</strong> The model holds out a random slice of its training readings for early stopping, so <code>python/seed_sensitivity.py</code> retrains every row under ten seeds. Telemetry clears the 75% precision floor under all ten, at 88.89%–97.78% actionable (median 92.78%); exposure clears it under none (AUC 0.677–0.685); the published seed reproduces the table exactly. The comparison, not the second decimal, is the finding.</p>
 <p>Two things follow.</p>
 <p><strong>The warning is in the data.</strong> Telemetry alone, read by a model instead of a fixed threshold, recovers 92% actionable lead time at essentially the same precision. The deployed rule discards it.</p>
 <p><strong>The stress model is not a substitute for condition monitoring.</strong> Exposure features alone — Finding 1's variables — cannot reach the precision floor at any threshold. The two findings are about different things and the operator needs both. That is worth stating precisely because the tempting conclusion from Finding 1 is that the stress model makes the telemetry redundant. It does not.</p>

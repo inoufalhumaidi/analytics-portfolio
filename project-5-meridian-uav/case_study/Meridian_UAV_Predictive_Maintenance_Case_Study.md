@@ -147,6 +147,12 @@ would never report:
 | **Both** | 0.9986 | 85.71% | **100%** | 43.50 h |
 | *Deployed fixed 3.40× threshold* | — | 77.39% | **38.20%** | 13.18 h |
 
+**None of these figures is one lucky draw.** The model holds out a random slice of its training
+readings for early stopping, so `python/seed_sensitivity.py` retrains every row under ten seeds.
+Telemetry clears the 75% precision floor under all ten, at 88.89%–97.78% actionable (median
+92.78%); exposure clears it under none (AUC 0.677–0.685); the published seed reproduces the table
+exactly. The comparison, not the second decimal, is the finding.
+
 Two things follow.
 
 **The warning is in the data.** Telemetry alone, read by a model instead of a fixed threshold,
