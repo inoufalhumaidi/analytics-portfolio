@@ -161,6 +161,12 @@ rounding class in 3.4, and a routing rule that held only by coincidence.
 Each widened test failed on the old SQL before the fix went in. All figures quoted in the case
 study at 2025-12 are unchanged.
 
+A fourth, latent, was fixed on 2026-09-30: the trailing-twelve-month weighted average terms and
+billing lag used `BETWEEN DATEADD(MONTH, -12, @AsOf) AND @AsOf`, inclusive at both ends, so each
+window was 366 days and consecutive month-ends shared a day. The window now starts the day after.
+No quoted figure moves: at 2025-12 terms are still 46.68 days and lag 1.78; across the 23
+month-ends, terms move by at most 0.02 days in five months and lag by 0.01 in one.
+
 ### 3e. Four defects found in a later review (2026-09-19)
 
 This project was reviewed last of the three, after the same review had found a wrong headline

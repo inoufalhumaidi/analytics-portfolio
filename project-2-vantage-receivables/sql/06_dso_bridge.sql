@@ -392,13 +392,17 @@ AS RETURN
     Win AS (
         SELECT Sales12 = SUM(CreditSales), Days12 = SUM(DaysInMonth) FROM Months
     ),
+    -- Twelve months means the day AFTER the same date a year earlier: the
+    -- functions filter BETWEEN @From AND @To, inclusive at both ends, so
+    -- DATEADD(MONTH, -12, @AsOf) as @From counted 366 days (and a year-old
+    -- day twice across consecutive month-ends).
     Terms AS (
         SELECT WeightedAvgTermsDays
-        FROM dbo.fn_WeightedAvgTerms(DATEADD(MONTH, -12, @AsOf), @AsOf)
+        FROM dbo.fn_WeightedAvgTerms(DATEADD(DAY, 1, DATEADD(MONTH, -12, @AsOf)), @AsOf)
     ),
     Lag AS (
         SELECT BillingLagDays
-        FROM dbo.fn_BillingLag(DATEADD(MONTH, -12, @AsOf), @AsOf)
+        FROM dbo.fn_BillingLag(DATEADD(DAY, 1, DATEADD(MONTH, -12, @AsOf)), @AsOf)
     )
     SELECT
         AsOfDate = @AsOf,

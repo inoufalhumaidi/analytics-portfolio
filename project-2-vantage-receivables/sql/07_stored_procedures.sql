@@ -80,9 +80,11 @@ BEGIN
     );
 
     -- dollar-weighted days between despatch and invoice, trailing twelve months
+    -- (from the day after the same date a year earlier: fn_BillingLag's window
+    -- is inclusive at both ends, so the plain DATEADD counted 366 days)
     DECLARE @LagDays DECIMAL(10,2) = (
         SELECT CAST(BillingLagDays AS DECIMAL(10,2))
-        FROM dbo.fn_BillingLag(DATEADD(MONTH, -12, @AsOf), @AsOf)
+        FROM dbo.fn_BillingLag(DATEADD(DAY, 1, DATEADD(MONTH, -12, @AsOf)), @AsOf)
     );
 
     -- promised dollars actually received, trailing twelve months
