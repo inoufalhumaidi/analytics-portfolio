@@ -127,8 +127,18 @@ while ($i -lt $lines.Count) {
     # ---- list --------------------------------------------------------------
     if ($line -match '^\s*(?:[-*]|\d+\.)\s+(.*)$') {
         if (-not $listOpen) { [void]$out.AppendLine('<ul>'); $listOpen = $true }
-        [void]$out.AppendLine("<li>$(ConvertTo-Inline $Matches[1])</li>")
-        $i++; continue
+        $item = @($Matches[1])
+        $i++
+        # An indented line after a bullet continues that bullet, as Markdown
+        # renders it. Taking only the first line closed the list mid-sentence and
+        # printed the rest of the bullet as a stray paragraph.
+        while ($i -lt $lines.Count -and $lines[$i] -match '^\s+\S' -and
+               $lines[$i] -notmatch '^\s*(?:[-*]|\d+\.)\s') {
+            $item += $lines[$i].Trim()
+            $i++
+        }
+        [void]$out.AppendLine("<li>$(ConvertTo-Inline ($item -join ' '))</li>")
+        continue
     }
 
     # ---- paragraph / blank -------------------------------------------------

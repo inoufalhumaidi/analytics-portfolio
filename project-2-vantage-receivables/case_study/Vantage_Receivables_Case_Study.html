@@ -400,21 +400,11 @@ CashCycle = BillingLag + DSO_classic = 1.78 + 61.59 = 63.37 days
 <p><strong>65 accounts — 10 to 13 per collector — carrying 81.3% of the collectable exposure.</strong></p>
 <p>Four design decisions are worth naming:</p>
 <ul>
-<li><strong><code>APPLY_CASH</code> takes precedence over every other action.</strong> 51 accounts have cash already banked</li>
+<li><strong><code>APPLY_CASH</code> takes precedence over every other action.</strong> 51 accounts have cash already banked against them covering at least half their past-due balance. Ringing a customer who has already paid is the single most damaging call a collections team can make, and it is not a collections job at all — it is a cash application job. These accounts are routed out of the call list entirely: they never take one of a collector's daily slots, and <strong>UAT-20 asserts at every month-end that none of them reaches a collector's worklist</strong>.</li>
+<li><strong>Disputes are discounted, not ranked.</strong> Chasing cash on a disputed invoice does not work; that balance needs the dispute resolving, which is a different team's job.</li>
+<li><strong>Two broken promises in 90 days escalates</strong>, regardless of balance. It is the earliest reliable distress signal in the data and it costs nothing to collect.</li>
+<li><strong>Credit hold is a flag, not an action.</strong> Holding orders sits alongside a collections action rather than replacing it. As a competing branch it was also unreachable — every over-limit account already qualified for escalation — so the control silently did nothing.</li>
 </ul>
-<p>against them covering at least half their past-due balance. Ringing a customer who has already paid is the single most damaging call a collections team can make, and it is not a collections job at all — it is a cash application job. These accounts are routed out of the call list entirely: they never take one of a collector's daily slots, and <strong>UAT-20 asserts at every month-end that none of them reaches a collector's worklist</strong>.</p>
-<ul>
-<li><strong>Disputes are discounted, not ranked.</strong> Chasing cash on a disputed invoice does not work; that</li>
-</ul>
-<p>balance needs the dispute resolving, which is a different team's job.</p>
-<ul>
-<li><strong>Two broken promises in 90 days escalates</strong>, regardless of balance. It is the earliest</li>
-</ul>
-<p>reliable distress signal in the data and it costs nothing to collect.</p>
-<ul>
-<li><strong>Credit hold is a flag, not an action.</strong> Holding orders sits alongside a collections action</li>
-</ul>
-<p>rather than replacing it. As a competing branch it was also unreachable — every over-limit account already qualified for escalation — so the control silently did nothing.</p>
 <h3>The second worklist</h3>
 <p>Collections gets a call list. Cash application gets its own, ranked oldest-first:</p>
 <blockquote><p><strong>97 accounts hold $419,392 of unmatched cash. 57 receipts have no application against them at all. The oldest of those has been sitting for 668 days; the oldest receipt with any unapplied remainder at all goes back 679. $409,640 of past-due balance would be wrongly chased if nobody applies it first.</strong></p></blockquote>
@@ -507,21 +497,17 @@ CashCycle = BillingLag + DSO_classic = 1.78 + 61.59 = 63.37 days
 <hr/>
 <h2>7. What I would do differently</h2>
 <ul>
-<li><strong>Model cash receipt and cash application separately from the start.</strong> This was originally</li>
+<li><strong>Model cash receipt and cash application separately from the start.</strong> This was originally deferred as a limitation, and closing it changed a headline conclusion: 2.38 days of DSO moved out of "customers are paying late" and into "we have not applied our own cash". A modelling shortcut that cannot represent a category will silently attribute that category to something else.</li>
 </ul>
-<p>deferred as a limitation, and closing it changed a headline conclusion: 2.38 days of DSO moved out of "customers are paying late" and into "we have not applied our own cash". A modelling shortcut that cannot represent a category will silently attribute that category to something else.</p>
 <ul>
-<li><strong>Cut the data by pairs of dimensions during profiling.</strong> The instalment defect was invisible</li>
+<li><strong>Cut the data by pairs of dimensions during profiling.</strong> The instalment defect was invisible to single-dimension checks and obvious the moment ageing met terms. Every cohort finding in §3.4 came from the same habit, applied deliberately rather than accidentally.</li>
 </ul>
-<p>to single-dimension checks and obvious the moment ageing met terms. Every cohort finding in §3.4 came from the same habit, applied deliberately rather than accidentally.</p>
 <ul>
-<li><strong>Write the workbook validator before the workbook.</strong> It found two defects in the first file</li>
+<li><strong>Write the workbook validator before the workbook.</strong> It found two defects in the first file it opened. Had it existed first, the build would never have reported a success it had not earned.</li>
 </ul>
-<p>it opened. Had it existed first, the build would never have reported a success it had not earned.</p>
 <ul>
-<li><strong>Treat rounding as a published contract, not a formatting choice.</strong> Two of the defects above</li>
+<li><strong>Treat rounding as a published contract, not a formatting choice.</strong> Two of the defects above were rounding inconsistencies that produced figures which did not add up on the page.</li>
 </ul>
-<p>were rounding inconsistencies that produced figures which did not add up on the page.</p>
 <hr/>
 <h2>8. How to verify any figure in this study</h2>
 <pre><code>

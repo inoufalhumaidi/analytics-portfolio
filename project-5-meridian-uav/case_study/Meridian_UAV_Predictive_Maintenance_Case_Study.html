@@ -312,22 +312,10 @@ stress hours = flight hours × profile multiplier
 <p><strong>26 jobs fit in the first week.</strong> That is the honest schedule answer, and changing the capacity cell in the workbook re-cuts it: at 240 hours a week it becomes 53 jobs and 2.8 weeks.</p>
 <h3>Recommendations</h3>
 <ul>
-<li><strong>Re-express the service intervals in stress hours.</strong> <code>Ref_ServiceInterval</code> already carries both</li>
-</ul>
-<p>columns. The maintenance system continues to enforce hours; the planning layer schedules on stress. No aircraft change, no new instrumentation.</p>
-<ul>
-<li><strong>Retune the motor-controller alarm to 2.05×.</strong> It is strictly better on the axis that matters and</li>
-</ul>
-<p>still clears the precision floor. This is the single highest-return action in the analysis: 87 additional failures caught in time, for nothing.</p>
-<ul>
-<li><strong>Do not retune the rotor alarm — stock the part.</strong> At a 75% precision floor the rotor cannot get</li>
-</ul>
-<p>past 51% actionable, because its median warning (18.93 h) sits almost exactly on its 18-hour lead time. Tuning cannot fix that. Holding rotor assemblies in local stores can, and it is a supply decision rather than an analytics one.</p>
-<ul>
-<li><strong>Manage Highland, Port and Academy on a shorter interval than Coastal.</strong> The work differs by</li>
-</ul>
-<p>2.15 : 1.17 in damage per logged hour. A single fleet-wide interval will keep producing this.</p>
-<ul>
+<li><strong>Re-express the service intervals in stress hours.</strong> <code>Ref_ServiceInterval</code> already carries both columns. The maintenance system continues to enforce hours; the planning layer schedules on stress. No aircraft change, no new instrumentation.</li>
+<li><strong>Retune the motor-controller alarm to 2.05×.</strong> It is strictly better on the axis that matters and still clears the precision floor. This is the single highest-return action in the analysis: 87 additional failures caught in time, for nothing.</li>
+<li><strong>Do not retune the rotor alarm — stock the part.</strong> At a 75% precision floor the rotor cannot get past 51% actionable, because its median warning (18.93 h) sits almost exactly on its 18-hour lead time. Tuning cannot fix that. Holding rotor assemblies in local stores can, and it is a supply decision rather than an analytics one.</li>
+<li><strong>Manage Highland, Port and Academy on a shorter interval than Coastal.</strong> The work differs by 2.15 : 1.17 in damage per logged hour. A single fleet-wide interval will keep producing this.</li>
 <li><strong>Stop reporting fleet-average compliance.</strong> It is 99.73% and it describes none of the four bases.</li>
 </ul>
 <hr/>
