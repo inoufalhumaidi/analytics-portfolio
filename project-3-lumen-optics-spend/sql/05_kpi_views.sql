@@ -467,7 +467,22 @@ AS RETURN
         RecommendedAction = CASE r.ActionCode
             WHEN 'FIX_QUALITY'      THEN 'Quality first: the loss here is rejected material, not price. Open a corrective action with the supplier before discussing cost.'
             WHEN 'PUT_ON_CONTRACT'  THEN 'Most of this spend has no agreement in force. Put it under contract before attempting to negotiate a price against nothing.'
-            WHEN 'RENEGOTIATE'      THEN 'Renegotiate: a credible alternative exists and the supplier cares about our volume. Open with the category erosion benchmark.'
+            -- Three routes lead here (strong leverage; moderate leverage once the
+            -- sole-source routes are taken; or a gap too large not to ask), so the
+            -- instruction states THIS pair's position rather than assuming the
+            -- first: "a credible alternative exists" was printed on five
+            -- sole-source pairs.
+            WHEN 'RENEGOTIATE'      THEN CONCAT('Renegotiate. ',
+                CASE WHEN r.QualifiedSupplierCount > 1 AND r.LumenRevenueSharePct >= 8
+                          THEN 'A qualified alternative exists, and Lumen is at least 8% of this supplier''s revenue'
+                     WHEN r.QualifiedSupplierCount > 1
+                          THEN 'A qualified alternative exists, though Lumen is under 8% of this supplier''s revenue'
+                     WHEN r.LumenRevenueSharePct >= 8
+                          THEN 'No second supplier is qualified, but Lumen is at least 8% of this supplier''s revenue'
+                     ELSE 'No second supplier is qualified, and Lumen is under 8% of this supplier''s revenue' END,
+                CASE WHEN r.LeverageScore < 40
+                     THEN ': leverage is weak, but the gap is large enough to justify the meeting' ELSE '' END,
+                '. Open with the category erosion benchmark.')
             WHEN 'DUAL_SOURCE'      THEN 'Sole source with real money at stake and a reachable requalification. Qualify a second supplier, then reopen the price.'
             WHEN 'QUALIFY_ALTERNATE'THEN 'Sole source with a long requalification. Start qualifying an alternate now: this is a project, not a negotiation, and the price will not move until it lands.'
             ELSE                         'Accept for now: no credible leverage and not enough value to create any. Revisit if volume or the supplier base changes.'

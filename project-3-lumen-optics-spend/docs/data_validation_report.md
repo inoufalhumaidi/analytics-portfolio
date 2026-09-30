@@ -264,6 +264,35 @@ Both were written the same way, and in both the printed word "FAIL" stood in for
 
 ---
 
+## 3g. What building the web demo found (2026-09-30)
+
+The Streamlit demo had to reproduce every case-study figure from the committed extracts alone, a
+stricter reading than any earlier check made. Each finding below was re-derived in SQL before
+anything changed.
+
+**The headline supplier claim did not hold.** The case study said VEN-004 was "cheapest per unit,
+dearest per accepted unit on every shared part". Over all history it is dearest per accepted unit
+on none of its three shared laser-diode parts, and on LOM-0072 it trails the best by 27 cents. By
+order year the picture is clear and more interesting: in 2023 it cost more per accepted unit than
+the best alternative on all three parts; its prices then fell 11-16% a year, and in 2024 and 2025
+it was the cheapest per accepted unit on all three. The case study now tells that story, and its
+lesson changed from "move volume off VEN-004" to "compare on cost per accepted unit over a recent
+window, and fix VEN-004's rejection rate".
+
+**Other figures corrected:** a rejection rate 8.4 times its competitors', not seven; VEN-009 on time
+for 83% of 2023 orders and 20.8% of 2025's (the case study had mixed a year with all history);
+expedite spend doubled book-wide, not on long-lead parts; Recommendation 5 now targets the 8
+`DUAL_SOURCE` pairs rather than "the three largest sole-source parts", which SQL routes elsewhere;
+6 overlapping agreements over 61 PO lines, not 61 agreements.
+
+**The queue told five sole-source pairs that "a credible alternative exists".** RENEGOTIATE is
+reached three ways -- strong leverage, moderate leverage once the sole-source routes are taken, or a
+gap too large not to ask -- and one fixed sentence assumed the first. `RecommendedAction` now states
+each pair's own position (whether a second supplier is qualified; whether Lumen is at least 8% of
+the supplier's revenue; whether leverage is weak). The extract, the workbook and the Power BI model
+were refreshed, and the app's validator checks that no sole-source instruction claims an
+alternative (it flags all five on the old extract).
+
 ## 4. Defects deliberately retained
 
 | Defect | Count | Value | Why retained |

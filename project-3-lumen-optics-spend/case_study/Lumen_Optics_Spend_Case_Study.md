@@ -133,8 +133,8 @@ year.
 
 ### 4.2 The cheapest price was the dearest usable part — until the price fell further
 
-VEN-004 undercuts every competitor on laser diodes, on all three parts it shares with them, in
-every year. It also rejects far more of what it ships: on LOM-0072, 8.4% against 1.0% for the other
+VEN-004 prices laser diodes at or below every competitor, on all three parts it shares with them,
+in every year (on one of them, in 2023, it ties). It also rejects far more of what it ships: on LOM-0072, 8.4% against 1.0% for the other
 two suppliers — 8.4 times the rate. Whether it is the cheapest *usable* supplier therefore depends
 on which is moving faster, its price or its rejects, and on these parts the answer changed.
 
@@ -146,7 +146,7 @@ Part LOM-0072, three qualified suppliers, **cost per accepted unit** by order ye
 | VEN-012 | $212.00 | $204.35 | $189.42 | $204.44 | $197.43 | 98.99% |
 | VEN-009 | $223.59 | — | $193.55 | $213.94 | $211.49 | 99.09% |
 
-In 2023 VEN-004 was the cheapest per unit and the **dearest per usable component**: a 2% price
+In 2023 VEN-004 was the cheapest per unit on LOM-0072 and the **dearest per usable component**: a 2% price
 advantage did not cover a 9% rejection rate, and on every shared part it cost more per accepted unit
 than the best alternative. Its prices then fell between 11% and 16% a year, far faster than its
 rejection rate moved, and in 2024 and 2025 it was the **cheapest per accepted unit on all three
